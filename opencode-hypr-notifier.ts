@@ -127,8 +127,8 @@ function getConfigPath(): string {
   return join(homedir(), ".config", "opencode", "opencode-hyprland.json")
 }
 
-// For testing: reset config cache
-export function __resetConfigCache(): void {
+// For testing: reset config cache (internal only)
+function __resetConfigCache(): void {
   cachedConfig = null
   configLoadAttempted = false
 }

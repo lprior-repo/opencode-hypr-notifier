@@ -13,8 +13,7 @@
     "opencode-hypr-notifier.ts",
     "error-logger.ts",
     "shell.ts",
-    "README.md",
-    "HYPRLAND_NOTIFIER_README.md"
+    "README.md"
   ],
   "keywords": [
     "opencode",

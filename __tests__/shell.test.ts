@@ -12,7 +12,7 @@ import {
   assertCommandExecuted,
   describeShellMocking,
 } from "./test-fixtures"
-import { setExecutor, resetExecutor, getExecutor } from "../shell"
+import { setExecutor, resetExecutor, getExecutor } from "../src/shell"
 import { configureMockShell, getMockExecutor, resetMockShell, getCommandHistory } from "./shell.mock"
 
 // ============================================================================

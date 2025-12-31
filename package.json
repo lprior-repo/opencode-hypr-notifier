@@ -3,16 +3,14 @@
   "version": "1.0.0",
   "description": "A robust OpenCode plugin that sends system desktop notifications via notify-send for permission requests, session completions, and errors",
   "type": "module",
-  "main": "opencode-hypr-notifier.ts",
+  "main": "src/index.ts",
   "exports": {
     ".": {
-      "import": "./opencode-hypr-notifier.ts"
+      "import": "./src/index.ts"
     }
   },
   "files": [
-    "opencode-hypr-notifier.ts",
-    "error-logger.ts",
-    "shell.ts",
+    "src/",
     "README.md"
   ],
   "keywords": [

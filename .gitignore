@@ -2,8 +2,10 @@ node_modules/
 dist/
 *.d.ts
 *.d.ts.map
-*.js
-*.js.map
+!eslint.config.js
+!tsconfig.json
+dist/**/*.js
+dist/**/*.js.map
 .DS_Store
 .env
 .env.local

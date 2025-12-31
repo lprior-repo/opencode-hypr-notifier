@@ -5,7 +5,7 @@
  */
 
 import { describe, beforeEach, afterEach } from "bun:test"
-import { setExecutor, resetExecutor } from "../shell"
+import { setExecutor, resetExecutor } from "../src/shell"
 import {
   getMockExecutorWithHistory,
   resetMockShell,

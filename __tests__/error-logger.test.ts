@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "bun:test"
-import { errorLogger } from "../error-logger"
+import { errorLogger } from "../src/error-logger"
 
 describe("ErrorLogger", () => {
   beforeEach(() => {

@@ -67,18 +67,26 @@ Customize every aspect via `~/.config/opencode/opencode-hyprland.json`:
 
 ## Installation
 
-The plugin auto-discovers and loads from OpenCode's plugin directory:
+### Option 1: Local Installation (Recommended for Development)
+
+Copy the plugin to OpenCode's plugin directory:
 
 ```bash
-# Copy plugin files to OpenCode's plugin directory
-cp -r . ~/.config/opencode/plugin/
+# Copy only the compiled entry point
+cp src/index.ts ~/.config/opencode/plugin/index.ts
+cp README.md ~/.config/opencode/plugin/README.md
 ```
 
-Or clone this repo and symlink:
+The plugin auto-discovers and loads on OpenCode startup.
 
-```bash
-git clone https://github.com/yourusername/opencode-hypr-notifier.git ~/projects/opencode-hypr-notifier
-ln -s ~/projects/opencode-hypr-notifier ~/.config/opencode/plugin/opencode-hypr-notifier
+### Option 2: NPM Installation (Coming Soon)
+
+Once published to npm, install via your OpenCode configuration:
+
+```json
+{
+  "plugin": ["opencode-hypr-notifier"]
+}
 ```
 
 ## System Requirements

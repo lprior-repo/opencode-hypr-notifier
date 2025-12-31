@@ -1,47 +1,55 @@
 {
   "name": "opencode-hypr-notifier",
-  "version": "1.0.0",
-  "description": "A robust OpenCode plugin that sends system desktop notifications via notify-send for permission requests, session completions, and errors",
+  "version": "1.1.0",
+  "description": "OpenCode plugin that sends desktop notifications via notify-send for permission requests, session completions, and errors. Works with Hyprland and any Linux desktop.",
   "type": "module",
-  "main": "src/index.ts",
+  "main": "./src/hypr-notifier.ts",
   "exports": {
     ".": {
-      "import": "./src/index.ts"
+      "import": "./src/hypr-notifier.ts",
+      "types": "./src/hypr-notifier.ts"
     }
   },
   "files": [
-    "src/",
-    "README.md"
+    "src/hypr-notifier.ts"
   ],
   "keywords": [
     "opencode",
+    "opencode-plugin",
     "plugin",
     "notifications",
     "hyprland",
     "desktop",
-    "notify-send"
+    "notify-send",
+    "linux",
+    "wayland"
   ],
   "scripts": {
     "test": "bun test",
-    "build": "tsc",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "bun run --bun tsc --noEmit",
+    "lint": "bun run --bun biome check src/",
+    "prepublishOnly": "bun run typecheck"
   },
+  "dependencies": {},
   "devDependencies": {
-    "@opencode-ai/plugin": "^1.0.0",
+    "@opencode-ai/plugin": "^1.0.209",
     "@types/bun": "latest",
-    "typescript": "^5.3.0"
+    "typescript": "^5"
   },
   "peerDependencies": {
-    "@opencode-ai/plugin": "^1.0.0"
+    "@opencode-ai/plugin": ">=1.0.0"
   },
   "author": "Lewis",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/lprior-repo/opencode-hypr-notifier.git"
+    "url": "git+https://github.com/lprior-repo/opencode-hypr-notifier.git"
   },
   "bugs": {
     "url": "https://github.com/lprior-repo/opencode-hypr-notifier/issues"
   },
-  "homepage": "https://github.com/lprior-repo/opencode-hypr-notifier#readme"
+  "homepage": "https://github.com/lprior-repo/opencode-hypr-notifier#readme",
+  "engines": {
+    "bun": ">=1.0.0"
+  }
 }

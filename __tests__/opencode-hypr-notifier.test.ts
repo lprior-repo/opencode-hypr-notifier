@@ -94,10 +94,18 @@ describe("Session Idle Events", () => {
     await expect(hookFunction.event({ event: eventFixtures.sessionIdleEventWithNull })).resolves.toBeUndefined()
   })
 
-  it("should handle multiple rapid session events", async () => {
-    const events = generateSessionEvents(5)
-    await Promise.all(events.map((event) => hookFunction.event({ event })))
-  })
+   it("should handle multiple rapid session events", async () => {
+     const events = generateSessionEvents(5)
+     await Promise.all(events.map((event) => hookFunction.event({ event })))
+   })
+
+   it("should handle session complete event", async () => {
+     await expect(hookFunction.event({ event: eventFixtures.sessionCompleteEvent })).resolves.toBeUndefined()
+   })
+
+   it("should handle task complete event", async () => {
+     await expect(hookFunction.event({ event: eventFixtures.taskCompleteEvent })).resolves.toBeUndefined()
+   })
 })
 
 // ============================================================================

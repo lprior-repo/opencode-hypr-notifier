@@ -502,6 +502,8 @@ const eventHandlers: Readonly<Record<string, EventHandler>> = Object.freeze({
   "permission.updated": (event, config) => handleEvent(event, config, "permission", "permission"),
   "session.idle": (event, config) => handleEvent(event, config, "session", "session"),
   "session.updated": (event, config) => handleEvent(event, config, "session", "session"),
+  "session.complete": (event, config) => handleEvent(event, config, "session", "session"),
+  "task.complete": (event, config) => handleEvent(event, config, "session", "session"),
   "session.error": (event, config) => handleEvent(event, config, "error", "error"),
 })
 
@@ -530,22 +532,29 @@ export const HyprlandNotifierPlugin: Plugin = async ({ $: _shell, client: _clien
     })
   }
 
-  return {
-    event: async ({ event }): Promise<void> => {
-      try {
-        const handler = eventHandlers[event.type]
+   return {
+     event: async ({ event }): Promise<void> => {
+       try {
+         const handler = eventHandlers[event.type]
 
-        if (handler) {
-          await handler(event, config)
-        } else {
-          // Silently ignore unknown events
-          errorLogger.log("debug", "Ignoring unknown event type", { eventType: event.type })
-        }
-      } catch (error) {
-        errorLogger.log("error", "Error handling event", { eventType: event.type }, error)
-      }
-    },
-  }
+         if (handler) {
+           await handler(event, config)
+         } else {
+           // Log unknown event types with more detail for debugging
+           errorLogger.log("debug", "Ignoring unknown event type", { 
+             eventType: event.type,
+             availableHandlers: Object.keys(eventHandlers),
+             propertiesKeys: typeof event.properties === "object" && event.properties !== null ? Object.keys(event.properties as Record<string, unknown>) : "not-object"
+           })
+         }
+       } catch (error) {
+         errorLogger.log("error", "Error handling event", { 
+           eventType: event.type,
+           error: error instanceof Error ? error.message : String(error)
+         }, error)
+       }
+     },
+   }
 }
 
 export default HyprlandNotifierPlugin

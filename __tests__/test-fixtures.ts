@@ -121,6 +121,28 @@ export const eventFixtures = Object.freeze({
     type: "" as const,
     properties: {},
   },
+
+  sessionCompleteEvent: {
+    type: "session.complete" as const,
+    properties: {
+      sessionID: "sess_complete_123",
+      info: {
+        id: "sess_complete_123",
+        title: "Code Review Task",
+      },
+    },
+  },
+
+  taskCompleteEvent: {
+    type: "task.complete" as const,
+    properties: {
+      sessionID: "task_complete_456",
+      info: {
+        id: "task_complete_456",
+        title: "API Development",
+      },
+    },
+  },
 })
 
 // ============================================================================

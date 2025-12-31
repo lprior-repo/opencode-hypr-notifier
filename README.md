@@ -69,12 +69,19 @@ Customize every aspect via `~/.config/opencode/opencode-hyprland.json`:
 
 ### Option 1: Local Installation (Recommended for Development)
 
-Copy the plugin to OpenCode's plugin directory:
+For local development, OpenCode requires a **single entry point** file. Create a bundled version:
 
 ```bash
-# Copy only the compiled entry point
-cp src/index.ts ~/.config/opencode/plugin/index.ts
-cp README.md ~/.config/opencode/plugin/README.md
+# Create bundled plugin (combines all source files into one)
+cat src/error-logger.ts src/shell.ts src/index.ts | \
+  grep -v "^import\|^export {" | \
+  grep -v "^export const errorLogger\|^export function\|^export async\|^export type" > \
+  ~/.config/opencode/plugin/index.ts
+```
+
+Or copy the pre-bundled version if available:
+```bash
+cp dist/index.ts ~/.config/opencode/plugin/index.ts
 ```
 
 The plugin auto-discovers and loads on OpenCode startup.

@@ -360,7 +360,30 @@ function buildEventBody(eventType: string, props: unknown): string {
       return buildErrorEventBody(propsRecord as SessionErrorProperties)
     }
     default: {
-      return String(props)
+      // For any other event type, try to extract useful information
+      errorLogger.log("debug", "Unknown event type, attempting generic extraction", {
+        eventType,
+        propsKeys: Object.keys(propsRecord),
+      })
+      
+      let body = ""
+      
+      // Try to find a title/name/message field
+      if (typeof propsRecord.title === "string") {
+        body = propsRecord.title
+      } else if (typeof propsRecord.name === "string") {
+        body = propsRecord.name
+      } else if (typeof propsRecord.message === "string") {
+        body = propsRecord.message
+      } else if (typeof propsRecord.description === "string") {
+        body = propsRecord.description
+      } else if (typeof propsRecord.sessionID === "string") {
+        body = `Session: ${propsRecord.sessionID}`
+      } else {
+        body = `Event properties: ${JSON.stringify(propsRecord).substring(0, 200)}`
+      }
+      
+      return body || "Event completed"
     }
   }
 }

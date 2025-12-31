@@ -350,7 +350,10 @@ function buildEventBody(eventType: string, props: unknown): string {
     case "permission.updated": {
       return buildPermissionEventBody(propsRecord as PermissionEventProperties)
     }
-    case "session.idle": {
+    case "session.idle":
+    case "session.updated":
+    case "session.complete":
+    case "task.complete": {
       return buildSessionEventBody(propsRecord as SessionEventProperties)
     }
     case "session.error": {

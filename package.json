@@ -13,7 +13,6 @@
     "opencode-hypr-notifier.ts",
     "error-logger.ts",
     "shell.ts",
-    "dist",
     "README.md",
     "HYPRLAND_NOTIFIER_README.md"
   ],
@@ -42,10 +41,10 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-username/opencode-hypr-notifier.git"
+    "url": "https://github.com/lprior-repo/opencode-hypr-notifier.git"
   },
   "bugs": {
-    "url": "https://github.com/your-username/opencode-hypr-notifier/issues"
+    "url": "https://github.com/lprior-repo/opencode-hypr-notifier/issues"
   },
-  "homepage": "https://github.com/your-username/opencode-hypr-notifier#readme"
+  "homepage": "https://github.com/lprior-repo/opencode-hypr-notifier#readme"
 }

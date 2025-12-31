@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test"
-import { HyprlandNotifierPlugin } from "../opencode-hypr-notifier"
+import HyprlandNotifierPlugin from "../opencode-hypr-notifier"
 import {
   createMockContext,
   eventFixtures,

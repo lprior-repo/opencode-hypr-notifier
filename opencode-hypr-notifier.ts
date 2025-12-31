@@ -547,7 +547,7 @@ const eventHandlers: Readonly<Record<string, EventHandler>> = Object.freeze({
  *
  * Built with Bun native patterns and test-driven design
  */
-export const HyprlandNotifierPlugin: Plugin = async ({ $: _shell, client: _client, project: _project, directory: _directory, worktree: _worktree }): Promise<{ event: (input: { event: OpenCodeEvent }) => Promise<void> }> => {
+const HyprlandNotifierPlugin: Plugin = async ({ $: _shell, client: _client, project: _project, directory: _directory, worktree: _worktree }): Promise<{ event: (input: { event: OpenCodeEvent }) => Promise<void> }> => {
   const config = loadConfig()
 
   // Log only on first initialization
@@ -558,29 +558,29 @@ export const HyprlandNotifierPlugin: Plugin = async ({ $: _shell, client: _clien
     })
   }
 
-   return {
-     event: async ({ event }): Promise<void> => {
-       try {
-         const handler = eventHandlers[event.type]
+  return {
+    event: async ({ event }): Promise<void> => {
+      try {
+        const handler = eventHandlers[event.type]
 
-         if (handler) {
-           await handler(event, config)
-         } else {
-           // Log unknown event types with more detail for debugging
-           errorLogger.log("debug", "Ignoring unknown event type", { 
-             eventType: event.type,
-             availableHandlers: Object.keys(eventHandlers),
-             propertiesKeys: typeof event.properties === "object" && event.properties !== null ? Object.keys(event.properties as Record<string, unknown>) : "not-object"
-           })
-         }
-       } catch (error) {
-         errorLogger.log("error", "Error handling event", { 
-           eventType: event.type,
-           error: error instanceof Error ? error.message : String(error)
-         }, error)
-       }
-     },
-   }
+        if (handler) {
+          await handler(event, config)
+        } else {
+          // Log unknown event types with more detail for debugging
+          errorLogger.log("debug", "Ignoring unknown event type", { 
+            eventType: event.type,
+            availableHandlers: Object.keys(eventHandlers),
+            propertiesKeys: typeof event.properties === "object" && event.properties !== null ? Object.keys(event.properties as Record<string, unknown>) : "not-object"
+          })
+        }
+      } catch (error) {
+        errorLogger.log("error", "Error handling event", { 
+          eventType: event.type,
+          error: error instanceof Error ? error.message : String(error)
+        }, error)
+      }
+    },
+  }
 }
 
 export default HyprlandNotifierPlugin

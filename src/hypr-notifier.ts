@@ -20,10 +20,10 @@ type HyprlandConfig = Readonly<{
   notification: boolean
   timeout: number
   transient: boolean
-  icons: Readonly<{ permission: string; session: string }>
-  urgency: Readonly<{ permission: Urgency; session: Urgency }>
-  messages: Readonly<{ permission: string; session: string }>
-  category: Readonly<{ permission: string; session: string }>
+  icons: Readonly<{ permission: string; session: string; idle: string }>
+  urgency: Readonly<{ permission: Urgency; session: Urgency; idle: Urgency }>
+  messages: Readonly<{ permission: string; session: string; idle: string }>
+  category: Readonly<{ permission: string; session: string; idle: string }>
 }>
 
 type OpenCodeEvent = Readonly<{ type: string; properties: unknown }>
@@ -39,18 +39,22 @@ const DEFAULT_CONFIG: HyprlandConfig = Object.freeze({
   icons: Object.freeze({
     permission: "dialog-password",
     session: "emblem-ok-symbolic",
+    idle: "dialog-information",
   }),
   urgency: Object.freeze({
     permission: "critical",
     session: "normal",
+    idle: "normal",
   }),
   messages: Object.freeze({
     permission: "OpenCode Needs Your Attention",
     session: "OpenCode Session Idle",
+    idle: "OpenCode Waiting for Input",
   }),
   category: Object.freeze({
     permission: "im.received",
     session: "im.received",
+    idle: "im.received",
   }),
 })
 
@@ -60,6 +64,7 @@ const DEFAULT_CONFIG: HyprlandConfig = Object.freeze({
 
 let initialized = false
 let cachedConfig: HyprlandConfig | null = null
+let idleNotificationSent = false
 
 // ============================================================================
 // LOGGING
@@ -126,18 +131,22 @@ function loadConfig(): HyprlandConfig {
       urgency: Object.freeze({
         permission: isValidUrgency(getConfigProperty(urgencyObj, "permission")) ? getConfigProperty(urgencyObj, "permission") as Urgency : DEFAULT_CONFIG.urgency.permission,
         session: isValidUrgency(getConfigProperty(urgencyObj, "session")) ? getConfigProperty(urgencyObj, "session") as Urgency : DEFAULT_CONFIG.urgency.session,
+        idle: isValidUrgency(getConfigProperty(urgencyObj, "idle")) ? getConfigProperty(urgencyObj, "idle") as Urgency : DEFAULT_CONFIG.urgency.idle,
       }),
       messages: Object.freeze({
         permission: typeof getConfigProperty(messagesObj, "permission") === "string" ? getConfigProperty(messagesObj, "permission") as string : DEFAULT_CONFIG.messages.permission,
         session: typeof getConfigProperty(messagesObj, "session") === "string" ? getConfigProperty(messagesObj, "session") as string : DEFAULT_CONFIG.messages.session,
+        idle: typeof getConfigProperty(messagesObj, "idle") === "string" ? getConfigProperty(messagesObj, "idle") as string : DEFAULT_CONFIG.messages.idle,
       }),
       icons: Object.freeze({
         permission: typeof getConfigProperty(iconsObj, "permission") === "string" ? getConfigProperty(iconsObj, "permission") as string : DEFAULT_CONFIG.icons.permission,
         session: typeof getConfigProperty(iconsObj, "session") === "string" ? getConfigProperty(iconsObj, "session") as string : DEFAULT_CONFIG.icons.session,
+        idle: typeof getConfigProperty(iconsObj, "idle") === "string" ? getConfigProperty(iconsObj, "idle") as string : DEFAULT_CONFIG.icons.idle,
       }),
       category: Object.freeze({
         permission: typeof getConfigProperty(categoryObj, "permission") === "string" ? getConfigProperty(categoryObj, "permission") as string : DEFAULT_CONFIG.category.permission,
         session: typeof getConfigProperty(categoryObj, "session") === "string" ? getConfigProperty(categoryObj, "session") as string : DEFAULT_CONFIG.category.session,
+        idle: typeof getConfigProperty(categoryObj, "idle") === "string" ? getConfigProperty(categoryObj, "idle") as string : DEFAULT_CONFIG.category.idle,
       }),
     })
 
@@ -210,6 +219,13 @@ function buildBody(eventType: string, props: unknown): string {
     return body
   }
 
+  if (eventType === "session.idle") {
+    const sessionID = (p.sessionID ?? p.id ?? "unknown") as string
+    let body = "OpenCode has finished processing"
+    if (sessionID !== "unknown") body += `\nSession: ${sessionID}`
+    return body
+  }
+
   return typeof p.title === "string" ? p.title : "Event received"
 }
 
@@ -217,12 +233,13 @@ function buildBody(eventType: string, props: unknown): string {
 // EVENT HANDLERS
 // ============================================================================
 
-type EventKey = "permission" | "session"
+type EventKey = "permission" | "session" | "idle"
 
 const eventMap: Record<string, EventKey> = {
   "permission.updated": "permission",
   "session.complete": "session",
   "task.complete": "session",
+  "session.idle": "idle",
 }
 
 async function handleEvent(event: OpenCodeEvent, config: HyprlandConfig): Promise<void> {
@@ -230,6 +247,19 @@ async function handleEvent(event: OpenCodeEvent, config: HyprlandConfig): Promis
 
   const key = eventMap[event.type]
   if (!key) return
+
+  // For idle events, only send a single notification until session becomes active again
+  if (key === "idle") {
+    if (idleNotificationSent) {
+      return
+    }
+    idleNotificationSent = true
+  }
+
+  // Reset idle notification flag when session becomes active (permission request or completion)
+  if (key === "permission" || key === "session") {
+    idleNotificationSent = false
+  }
 
   const body = buildBody(event.type, event.properties)
   await sendNotification(

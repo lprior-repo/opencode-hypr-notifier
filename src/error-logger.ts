@@ -21,7 +21,6 @@ interface ErrorValidationResult {
   readonly context?: Record<string, unknown>
 }
 
-const LOG_STORAGE_KEY = "OPENCODE_PLUGIN_LOGS"
 const MAX_LOG_ENTRIES = 100
 const LOG_RETENTION_MS = 24 * 60 * 60 * 1000 // 24 hours
 
@@ -62,9 +61,10 @@ class ErrorLogger {
 
     if (typeof error === "object") {
       const errObj = error as Record<string, unknown>
+      const message = errObj["message"]
       return {
         isValid: true,
-        message: typeof errObj.message === "string" ? errObj.message : String(error),
+        message: typeof message === "string" ? message : String(error),
         level: "error",
         context: {
           type: typeof error,

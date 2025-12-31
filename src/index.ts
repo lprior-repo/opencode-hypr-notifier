@@ -127,14 +127,15 @@ function getConfigPath(): string {
   return join(homedir(), ".config", "opencode", "opencode-hyprland.json")
 }
 
-// For testing: reset config cache (internal only)
-function __resetConfigCache(): void {
-  cachedConfig = null
-  configLoadAttempted = false
-}
-
 function parseConfig(fileContent: string): unknown {
   return JSON.parse(fileContent) as unknown
+}
+
+function getConfigProperty(obj: unknown, key: string): unknown {
+  if (typeof obj !== "object" || obj === null) {
+    return undefined
+  }
+  return (obj as Record<string, unknown>)[key]
 }
 
 function validateAndMergeConfig(userConfig: unknown): HyprlandConfig {
@@ -144,61 +145,65 @@ function validateAndMergeConfig(userConfig: unknown): HyprlandConfig {
 
   const config = userConfig as Record<string, unknown>
 
-  const notification = typeof config.notification === "boolean" ? config.notification : DEFAULT_CONFIG.notification
-  const timeout = typeof config.timeout === "number" ? config.timeout : DEFAULT_CONFIG.timeout
-  const transient = typeof config.transient === "boolean" ? config.transient : DEFAULT_CONFIG.transient
+  const notification = typeof config["notification"] === "boolean" ? (config["notification"] as boolean) : DEFAULT_CONFIG.notification
+  const timeout = typeof config["timeout"] === "number" ? (config["timeout"] as number) : DEFAULT_CONFIG.timeout
+  const transient = typeof config["transient"] === "boolean" ? (config["transient"] as boolean) : DEFAULT_CONFIG.transient
 
+  const urgencyObj = config["urgency"]
   const urgency = {
-    permission: isValidUrgency(config.urgency instanceof Object && "permission" in config.urgency ? (config.urgency as Record<string, unknown>).permission : undefined)
-      ? (config.urgency as Record<string, unknown>).permission as Urgency
+    permission: isValidUrgency(getConfigProperty(urgencyObj, "permission"))
+      ? (getConfigProperty(urgencyObj, "permission") as Urgency)
       : DEFAULT_CONFIG.urgency.permission,
     session:
-      isValidUrgency(config.urgency instanceof Object && "session" in config.urgency ? (config.urgency as Record<string, unknown>).session : undefined) ||
-      isValidUrgency(config.urgency instanceof Object && "complete" in config.urgency ? (config.urgency as Record<string, unknown>).complete : undefined)
-        ? isValidUrgency(config.urgency instanceof Object && "session" in config.urgency ? (config.urgency as Record<string, unknown>).session : undefined)
-          ? (config.urgency as Record<string, unknown>).session as Urgency
-          : (config.urgency as Record<string, unknown>).complete as Urgency
+      isValidUrgency(getConfigProperty(urgencyObj, "session")) ||
+      isValidUrgency(getConfigProperty(urgencyObj, "complete"))
+        ? isValidUrgency(getConfigProperty(urgencyObj, "session"))
+          ? (getConfigProperty(urgencyObj, "session") as Urgency)
+          : (getConfigProperty(urgencyObj, "complete") as Urgency)
         : DEFAULT_CONFIG.urgency.session,
-    error: isValidUrgency(config.urgency instanceof Object && "error" in config.urgency ? (config.urgency as Record<string, unknown>).error : undefined)
-      ? (config.urgency as Record<string, unknown>).error as Urgency
+    error: isValidUrgency(getConfigProperty(urgencyObj, "error"))
+      ? (getConfigProperty(urgencyObj, "error") as Urgency)
       : DEFAULT_CONFIG.urgency.error,
   }
 
+  const messagesObj = config["messages"]
   const messages = {
-    permission: typeof config.messages === "object" && config.messages !== null && "permission" in config.messages && typeof (config.messages as Record<string, unknown>).permission === "string"
-      ? ((config.messages as Record<string, unknown>).permission as string)
+    permission: typeof getConfigProperty(messagesObj, "permission") === "string"
+      ? (getConfigProperty(messagesObj, "permission") as string)
       : DEFAULT_CONFIG.messages.permission,
-    session: typeof config.messages === "object" && config.messages !== null && ("session" in config.messages || "complete" in config.messages) && (typeof (config.messages as Record<string, unknown>).session === "string" || typeof (config.messages as Record<string, unknown>).complete === "string")
-      ? typeof (config.messages as Record<string, unknown>).session === "string"
-        ? ((config.messages as Record<string, unknown>).session as string)
-        : ((config.messages as Record<string, unknown>).complete as string)
+    session: typeof getConfigProperty(messagesObj, "session") === "string" || typeof getConfigProperty(messagesObj, "complete") === "string"
+      ? typeof getConfigProperty(messagesObj, "session") === "string"
+        ? (getConfigProperty(messagesObj, "session") as string)
+        : (getConfigProperty(messagesObj, "complete") as string)
       : DEFAULT_CONFIG.messages.session,
-    error: typeof config.messages === "object" && config.messages !== null && "error" in config.messages && typeof (config.messages as Record<string, unknown>).error === "string"
-      ? ((config.messages as Record<string, unknown>).error as string)
+    error: typeof getConfigProperty(messagesObj, "error") === "string"
+      ? (getConfigProperty(messagesObj, "error") as string)
       : DEFAULT_CONFIG.messages.error,
   }
 
+  const iconsObj = config["icons"]
   const icons = {
-    permission: typeof config.icons === "object" && config.icons !== null && "permission" in config.icons && typeof (config.icons as Record<string, unknown>).permission === "string"
-      ? ((config.icons as Record<string, unknown>).permission as string)
+    permission: typeof getConfigProperty(iconsObj, "permission") === "string"
+      ? (getConfigProperty(iconsObj, "permission") as string)
       : DEFAULT_CONFIG.icons.permission,
-    session: typeof config.icons === "object" && config.icons !== null && "session" in config.icons && typeof (config.icons as Record<string, unknown>).session === "string"
-      ? ((config.icons as Record<string, unknown>).session as string)
+    session: typeof getConfigProperty(iconsObj, "session") === "string"
+      ? (getConfigProperty(iconsObj, "session") as string)
       : DEFAULT_CONFIG.icons.session,
-    error: typeof config.icons === "object" && config.icons !== null && "error" in config.icons && typeof (config.icons as Record<string, unknown>).error === "string"
-      ? ((config.icons as Record<string, unknown>).error as string)
+    error: typeof getConfigProperty(iconsObj, "error") === "string"
+      ? (getConfigProperty(iconsObj, "error") as string)
       : DEFAULT_CONFIG.icons.error,
   }
 
+  const categoryObj = config["category"]
   const category = {
-    permission: typeof config.category === "object" && config.category !== null && "permission" in config.category && typeof (config.category as Record<string, unknown>).permission === "string"
-      ? ((config.category as Record<string, unknown>).permission as string)
+    permission: typeof getConfigProperty(categoryObj, "permission") === "string"
+      ? (getConfigProperty(categoryObj, "permission") as string)
       : DEFAULT_CONFIG.category.permission,
-    session: typeof config.category === "object" && config.category !== null && "session" in config.category && typeof (config.category as Record<string, unknown>).session === "string"
-      ? ((config.category as Record<string, unknown>).session as string)
+    session: typeof getConfigProperty(categoryObj, "session") === "string"
+      ? (getConfigProperty(categoryObj, "session") as string)
       : DEFAULT_CONFIG.category.session,
-    error: typeof config.category === "object" && config.category !== null && "error" in config.category && typeof (config.category as Record<string, unknown>).error === "string"
-      ? ((config.category as Record<string, unknown>).error as string)
+    error: typeof getConfigProperty(categoryObj, "error") === "string"
+      ? (getConfigProperty(categoryObj, "error") as string)
       : DEFAULT_CONFIG.category.error,
   }
 

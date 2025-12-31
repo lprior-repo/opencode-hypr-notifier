@@ -1,0 +1,10 @@
+__tests__/
+*.test.ts
+*.spec.ts
+tsconfig.json
+eslint.config.js
+.gitignore
+CHANGELOG.md
+node_modules/
+dist/
+bun.lock

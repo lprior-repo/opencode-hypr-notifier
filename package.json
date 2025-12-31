@@ -1,0 +1,51 @@
+{
+  "name": "opencode-hypr-notifier",
+  "version": "1.0.0",
+  "description": "A robust OpenCode plugin that sends system desktop notifications via notify-send for permission requests, session completions, and errors",
+  "type": "module",
+  "main": "opencode-hypr-notifier.ts",
+  "exports": {
+    ".": {
+      "import": "./opencode-hypr-notifier.ts"
+    }
+  },
+  "files": [
+    "opencode-hypr-notifier.ts",
+    "error-logger.ts",
+    "shell.ts",
+    "dist",
+    "README.md",
+    "HYPRLAND_NOTIFIER_README.md"
+  ],
+  "keywords": [
+    "opencode",
+    "plugin",
+    "notifications",
+    "hyprland",
+    "desktop",
+    "notify-send"
+  ],
+  "scripts": {
+    "test": "bun test",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@opencode-ai/plugin": "^1.0.0",
+    "@types/bun": "latest",
+    "typescript": "^5.3.0"
+  },
+  "peerDependencies": {
+    "@opencode-ai/plugin": "^1.0.0"
+  },
+  "author": "Lewis",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/opencode-hypr-notifier.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/opencode-hypr-notifier/issues"
+  },
+  "homepage": "https://github.com/your-username/opencode-hypr-notifier#readme"
+}

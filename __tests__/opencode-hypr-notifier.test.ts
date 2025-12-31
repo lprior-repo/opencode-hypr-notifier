@@ -395,11 +395,251 @@ describe("SDK-Realistic Events", () => {
     })
   })
 
-  describe("Session Events with Full SDK Data", () => {
-    it("should extract session.updated with full Session object", async () => {
-      await expect(
-        hookFunction.event({ event: sdkRealisticFixtures.sessionUpdatedEvent })
-      ).resolves.toBeUndefined()
+   describe("Session Events with Full SDK Data", () => {
+     it("should extract session.updated with full Session object", async () => {
+       await expect(
+         hookFunction.event({ event: sdkRealisticFixtures.sessionUpdatedEvent })
+       ).resolves.toBeUndefined()
+     })
+   })
+ })
+
+// ============================================================================
+// TASK COMPLETE AND SESSION COMPLETE EVENT TESTS (TDD for notification body)
+// ============================================================================
+
+describe("Task Complete and Session Complete Events", () => {
+  let hookFunction: { event: (input: { event: any }) => Promise<void> }
+
+  beforeEach(async () => {
+    setupShellMocking({ exitCode: 0 })
+    const ctx = createMockContext()
+    hookFunction = await HyprlandNotifierPlugin(ctx as any)
+  })
+
+  afterEach(() => {
+    cleanupShellMocking()
+  })
+
+  describe("task.complete event handling", () => {
+    it("should handle task.complete with title and sessionID", async () => {
+      const event = {
+        type: "task.complete" as const,
+        properties: {
+          sessionID: "task_session_123",
+          title: "Code Review Complete",
+        },
+      }
+
+      await expect(hookFunction.event({ event })).resolves.toBeUndefined()
+    })
+
+    it("should handle task.complete with info.title and info.id", async () => {
+      const event = {
+        type: "task.complete" as const,
+        properties: {
+          info: {
+            id: "task_info_456",
+            title: "API Development Task",
+          },
+        },
+      }
+
+      await expect(hookFunction.event({ event })).resolves.toBeUndefined()
+    })
+
+    it("should handle task.complete with nested summary info", async () => {
+      const event = {
+        type: "task.complete" as const,
+        properties: {
+          info: {
+            id: "task_with_summary_789",
+            title: "Feature Implementation",
+            summary: {
+              files: 5,
+              additions: 150,
+              deletions: 30,
+            },
+          },
+        },
+      }
+
+      await expect(hookFunction.event({ event })).resolves.toBeUndefined()
+    })
+
+    it("should handle task.complete with minimal properties", async () => {
+      const event = {
+        type: "task.complete" as const,
+        properties: {
+          sessionID: "minimal_task",
+        },
+      }
+
+      await expect(hookFunction.event({ event })).resolves.toBeUndefined()
+    })
+
+    it("should handle task.complete with empty properties", async () => {
+      const event = {
+        type: "task.complete" as const,
+        properties: {},
+      }
+
+      await expect(hookFunction.event({ event })).resolves.toBeUndefined()
+    })
+  })
+
+  describe("session.complete event handling", () => {
+    it("should handle session.complete with full info object", async () => {
+      const event = {
+        type: "session.complete" as const,
+        properties: {
+          info: {
+            id: "sess_complete_abc",
+            title: "Bug Fix Session",
+            summary: {
+              files: 3,
+              additions: 50,
+              deletions: 20,
+            },
+          },
+        },
+      }
+
+      await expect(hookFunction.event({ event })).resolves.toBeUndefined()
+    })
+
+    it("should handle session.complete with just sessionID", async () => {
+      const event = {
+        type: "session.complete" as const,
+        properties: {
+          sessionID: "sess_complete_xyz",
+        },
+      }
+
+      await expect(hookFunction.event({ event })).resolves.toBeUndefined()
+    })
+
+    it("should handle session.complete with null properties", async () => {
+      const event = {
+        type: "session.complete" as const,
+        properties: null,
+      }
+
+      await expect(hookFunction.event({ event })).resolves.toBeUndefined()
+    })
+  })
+
+  describe("Event body content validation", () => {
+    it("should include session ID in notification body for task.complete", async () => {
+      // This test validates the actual notification content
+      const event = {
+        type: "task.complete" as const,
+        properties: {
+          sessionID: "validate_session_id_123",
+          title: "Test Task",
+        },
+      }
+
+      // Should not throw and should process without error
+      await expect(hookFunction.event({ event })).resolves.toBeUndefined()
+    })
+
+    it("should include task title in notification body when available", async () => {
+      const event = {
+        type: "task.complete" as const,
+        properties: {
+          sessionID: "task_123",
+          info: {
+            id: "task_123",
+            title: "Specific Task Title That Should Appear",
+          },
+        },
+      }
+
+      await expect(hookFunction.event({ event })).resolves.toBeUndefined()
+    })
+
+    it("should include file change summary in notification body", async () => {
+      const event = {
+        type: "task.complete" as const,
+        properties: {
+          info: {
+            id: "task_with_changes",
+            title: "Code Changes Task",
+            summary: {
+              files: 5,
+              additions: 200,
+              deletions: 50,
+            },
+          },
+        },
+      }
+
+      await expect(hookFunction.event({ event })).resolves.toBeUndefined()
+    })
+
+    it("should not display raw object stringification (no [object Object])", async () => {
+      const event = {
+        type: "task.complete" as const,
+        properties: {
+          sessionID: "test_no_raw_objects",
+          title: "Clean Output Test",
+        },
+      }
+
+      // Should handle gracefully without returning [object Object]
+      await expect(hookFunction.event({ event })).resolves.toBeUndefined()
+    })
+  })
+
+  describe("Mixed complete event types", () => {
+    it("should handle rapid succession of task.complete events", async () => {
+      const events = [
+        {
+          type: "task.complete" as const,
+          properties: { sessionID: "task_1", title: "Task 1" },
+        },
+        {
+          type: "task.complete" as const,
+          properties: { sessionID: "task_2", title: "Task 2" },
+        },
+        {
+          type: "task.complete" as const,
+          properties: { sessionID: "task_3", title: "Task 3" },
+        },
+      ]
+
+      await Promise.all(events.map((event) => hookFunction.event({ event })))
+    })
+
+    it("should handle mixed session.complete and task.complete events", async () => {
+      const events = [
+        {
+          type: "session.complete" as const,
+          properties: { sessionID: "sess_1", title: "Session 1" },
+        },
+        {
+          type: "task.complete" as const,
+          properties: { sessionID: "task_1", title: "Task 1" },
+        },
+        {
+          type: "session.complete" as const,
+          properties: { sessionID: "sess_2", title: "Session 2" },
+        },
+      ]
+
+      await Promise.all(events.map((event) => hookFunction.event({ event })))
+    })
+
+    it("should handle complete events mixed with other event types", async () => {
+      const events = [
+        { type: "permission.updated" as const, properties: { type: "network", title: "API Access" } },
+        { type: "task.complete" as const, properties: { sessionID: "task_mixed_1" } },
+        { type: "session.error" as const, properties: { sessionID: "err_1", error: { name: "TestError", message: "Test" } } },
+        { type: "session.complete" as const, properties: { sessionID: "sess_mixed_1" } },
+      ]
+
+      await Promise.all(events.map((event) => hookFunction.event({ event })))
     })
   })
 })

@@ -1,664 +1,683 @@
 # Planning Plugin Design Document
 
-## Version: Round 3 - The Transcendent Loop
+## Version: Round 4 - Stress Test & Failure Modes
 
-**Previous rounds asked**: "How do we plan better?"
-**This round asks**: "What are humans actually for in this loop?"
-
----
-
-## 1. THE REFRAME
-
-### What We Got Wrong
-
-Rounds 1-2 designed a **serial planning process**:
-```
-Human asks → AI produces 1 thing → Human reviews → Human asks for changes → repeat
-```
-
-This is the same bottleneck we're trying to escape. We made planning "more thorough" but kept the human in every iteration.
-
-### What We Actually Need
-
-```
-Human intends → AI produces 100 attempts → Reality tests all 100 →
-Survivors surface → Human judges survivors only
-
-Bottleneck: only compute and human intent clarity
-```
-
-The planning plugin should not guide humans through planning steps.
-It should **compile human intent into executable specifications**, then get out of the way.
+**Decisions from Round 3 feedback:**
+- Full system (all 5 components)
+- SQLite database for intent/session persistence
+- OpenCode plugin patterns
+- Memory for runtime state
+- Unlimited parallel AI calls
 
 ---
 
-## 2. THE ARCHITECTURE
+## 1. FULL SYSTEM ARCHITECTURE
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                     INTENT TERMINAL                             │
-│                                                                 │
-│   Human provides:                                               │
-│   - What they want (natural language)                           │
-│   - Constraints (must/must-not)                                 │
-│   - Examples of "good" (if available)                           │
-│                                                                 │
-│   Human does NOT:                                               │
-│   - Iterate manually                                            │
-│   - Review intermediate work                                    │
-│   - Debug                                                       │
-└──────────────────────────┬──────────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                     INTENT COMPILER                             │
-│                                                                 │
-│   Inputs:                                                       │
-│   - Natural language intent                                     │
-│   - Codebase context                                            │
-│   - Constraints                                                 │
-│                                                                 │
-│   Outputs:                                                      │
-│   - Executable specification                                    │
-│   - Success criteria (testable assertions)                      │
-│   - Verification harness (how to check if it worked)            │
-│                                                                 │
-│   THIS IS THE HARD PART. THIS IS WHERE AI SHINES.               │
-└──────────────────────────┬──────────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    GENERATION SWARM                             │
-│                                                                 │
-│   Inputs:                                                       │
-│   - Executable specification                                    │
-│   - N = number of parallel attempts                             │
-│                                                                 │
-│   Outputs:                                                      │
-│   - N different implementations                                 │
-│   - Variations: algorithms, structures, styles                  │
-│   - Mutations: random perturbations of good solutions           │
-│                                                                 │
-│   NO JUDGMENT. JUST VOLUME.                                     │
-└──────────────────────────┬──────────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    REALITY HARNESS                              │
-│                                                                 │
-│   Executes EVERY attempt against:                               │
-│   - Type checker (does it compile?)                             │
-│   - Linter (does it follow rules?)                              │
-│   - Unit tests (does it pass spec?)                             │
-│   - Property tests (does it hold invariants?)                   │
-│   - Benchmarks (how fast? how small?)                           │
-│                                                                 │
-│   Returns: Pass/Fail + Evidence                                 │
-│   Does not care about intent or elegance.                       │
-│   Only answers: DOES THIS WORK OR NOT.                          │
-└──────────────────────────┬──────────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    SURVIVOR POOL                                │
-│                                                                 │
-│   Inputs: All attempts + All results                            │
-│                                                                 │
-│   Filters: Only those that passed verification                  │
-│                                                                 │
-│   Ranks by secondary criteria:                                  │
-│   - Simplicity (fewer lines, fewer dependencies)                │
-│   - Speed (benchmark results)                                   │
-│   - Readability (AI-assessed or heuristic)                      │
-│                                                                 │
-│   Outputs: Top K candidates for human judgment                  │
-└──────────────────────────┬──────────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    HUMAN JUDGMENT                               │
-│                                                                 │
-│   Sees: K survivors (already verified working)                  │
-│                                                                 │
-│   Chooses:                                                      │
-│   - "This one" → SHIP                                           │
-│   - "None of these, try X angle" → Redirect intent              │
-│   - "Closer but needs Y" → Refine specification                 │
-│                                                                 │
-│   Minimal effort. Maximum leverage.                             │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              OPENCODE RUNTIME                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           MANIFEST PLUGIN                                   │
+│                                                                             │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐        │
+│  │   Intent    │  │ Generation  │  │   Reality   │  │  Survivor   │        │
+│  │  Compiler   │──│   Swarm     │──│   Harness   │──│    Pool     │        │
+│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘        │
+│         │                │                │                │                │
+│         └────────────────┴────────────────┴────────────────┘                │
+│                                   │                                         │
+│                                   ▼                                         │
+│                          ┌─────────────┐                                    │
+│                          │   Database  │                                    │
+│                          │   (SQLite)  │                                    │
+│                          └─────────────┘                                    │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 3. THE FIVE COMPONENTS
+## 2. DATABASE SCHEMA
 
-### 3.1 Intent Terminal
+### Tables
 
-**What it is**: The human interface. Minimal, focused on capturing intent.
+```sql
+-- Intents: The human's original request
+CREATE TABLE intents (
+    id TEXT PRIMARY KEY,                    -- UUID
+    session_id TEXT NOT NULL,               -- OpenCode session ID
+    raw_message TEXT NOT NULL,              -- Original human message
+    parsed_intent TEXT,                     -- Structured YAML/JSON
+    constraints_must TEXT,                  -- JSON array
+    constraints_must_not TEXT,              -- JSON array
+    done_when TEXT,                         -- JSON array of success criteria
+    status TEXT DEFAULT 'parsing',          -- parsing|compiled|generating|verifying|judging|complete|failed
+    created_at INTEGER NOT NULL,            -- Unix timestamp
+    updated_at INTEGER NOT NULL
+);
 
-**What human provides**:
-```yaml
-intent: "Add user authentication to the app"
+-- Specifications: Compiled from intents
+CREATE TABLE specifications (
+    id TEXT PRIMARY KEY,
+    intent_id TEXT NOT NULL REFERENCES intents(id),
+    assertions TEXT NOT NULL,               -- JSON array of testable assertions
+    verification_tests TEXT NOT NULL,       -- Generated test file content
+    type_contract TEXT,                     -- TypeScript types to satisfy
+    allowed_files TEXT NOT NULL,            -- JSON array of paths
+    forbidden_files TEXT NOT NULL,          -- JSON array of paths
+    patterns TEXT,                          -- JSON array of patterns to follow
+    version INTEGER DEFAULT 1,              -- Incremented on refinement
+    created_at INTEGER NOT NULL
+);
 
-constraints:
-  must:
-    - "Use existing User model in src/models/user.ts"
-    - "Session-based, not JWT"
-    - "Password hashing with bcrypt"
-  must_not:
-    - "No OAuth for now"
-    - "No changes to database schema"
+-- Attempts: Generated implementations
+CREATE TABLE attempts (
+    id TEXT PRIMARY KEY,
+    spec_id TEXT NOT NULL REFERENCES specifications(id),
+    strategy TEXT NOT NULL,                 -- vanilla|minimal|defensive|patterns|mutation|adversarial
+    files TEXT NOT NULL,                    -- JSON array of {path, action, content}
+    approach TEXT,                          -- Brief description
+    ai_confidence REAL,                     -- 0.0-1.0
+    status TEXT DEFAULT 'pending',          -- pending|verifying|passed|failed
+    created_at INTEGER NOT NULL
+);
 
-examples:
-  good: "The login flow in acme-corp/webapp"
-  bad: "The over-engineered auth in that enterprise project"
+-- Verification results
+CREATE TABLE verifications (
+    id TEXT PRIMARY KEY,
+    attempt_id TEXT NOT NULL REFERENCES attempts(id),
+    passed INTEGER NOT NULL,                -- 0 or 1
+    typecheck_passed INTEGER,
+    typecheck_errors TEXT,
+    lint_passed INTEGER,
+    lint_errors TEXT,
+    unit_tests_passed INTEGER,
+    unit_tests_output TEXT,
+    spec_tests_passed INTEGER,
+    spec_tests_output TEXT,
+    assertions_passed INTEGER,
+    assertions_total INTEGER,
+    failure_reason TEXT,
+    duration_ms INTEGER,
+    created_at INTEGER NOT NULL
+);
 
-done_when:
-  - "User can register with email/password"
-  - "User can log in and get a session"
-  - "Protected routes reject unauthenticated requests"
+-- Survivors: Ranked passing attempts
+CREATE TABLE survivors (
+    id TEXT PRIMARY KEY,
+    attempt_id TEXT NOT NULL REFERENCES attempts(id),
+    verification_id TEXT NOT NULL REFERENCES verifications(id),
+    rank INTEGER NOT NULL,
+    score_assertions REAL,
+    score_simplicity REAL,
+    score_performance REAL,
+    score_readability REAL,
+    score_overall REAL,
+    presented_to_human INTEGER DEFAULT 0,   -- 0 or 1
+    human_decision TEXT,                    -- accept|refine|redirect|null
+    created_at INTEGER NOT NULL
+);
+
+-- Human judgments
+CREATE TABLE judgments (
+    id TEXT PRIMARY KEY,
+    intent_id TEXT NOT NULL REFERENCES intents(id),
+    survivor_id TEXT REFERENCES survivors(id),
+    decision TEXT NOT NULL,                 -- accept|refine|redirect|abort
+    refinement TEXT,                        -- New constraints if refine
+    redirect_intent TEXT,                   -- New intent if redirect
+    created_at INTEGER NOT NULL
+);
+
+-- Indexes for common queries
+CREATE INDEX idx_intents_session ON intents(session_id);
+CREATE INDEX idx_intents_status ON intents(status);
+CREATE INDEX idx_attempts_spec ON attempts(spec_id);
+CREATE INDEX idx_attempts_status ON attempts(status);
+CREATE INDEX idx_survivors_rank ON survivors(rank);
 ```
 
-**What human does NOT provide**:
-- Implementation details
-- Step-by-step instructions
-- Architecture decisions
-- Code reviews
+### Database Location
+
+```
+~/.config/opencode/manifest/
+├── manifest.db              -- SQLite database
+├── workspaces/              -- Temp workspaces for verification
+│   └── {attempt_id}/        -- Isolated workspace per attempt
+└── logs/
+    └── {intent_id}.log      -- Debug logs per intent
+```
 
 ---
 
-### 3.2 Intent Compiler
+## 3. FAILURE MODES & MITIGATIONS
 
-**What it is**: AI system that transforms intent into executable specification.
+### 3.1 Intent Compilation Failures
 
-**Input**: Intent (natural language + constraints + examples)
+| Failure | Cause | Detection | Mitigation |
+|---------|-------|-----------|------------|
+| **Ambiguous intent** | Human request unclear | AI flags ambiguities | Return clarification questions, don't proceed |
+| **Impossible constraints** | Contradictory must/must_not | Constraint solver | Report contradiction, ask human to resolve |
+| **No testable criteria** | "Make it better" with no measurable done_when | No assertions generated | Prompt human for specific success criteria |
+| **Codebase not accessible** | File system errors | I/O errors during analysis | Fail fast, report which files inaccessible |
+| **Pattern extraction fails** | Codebase too complex/unusual | Timeout or garbage patterns | Use sensible defaults, warn human |
 
-**Output**: Specification object
+**Recovery**: All compilation failures return to human with specific questions. Never generate from bad spec.
+
+### 3.2 Generation Swarm Failures
+
+| Failure | Cause | Detection | Mitigation |
+|---------|-------|-----------|------------|
+| **API rate limits** | Too many parallel calls | 429 responses | Exponential backoff, reduce parallelism |
+| **API timeout** | Slow responses | Timeout exceeded | Retry with exponential backoff (3 attempts) |
+| **API errors** | 500s, network issues | Error responses | Retry, then mark attempt as failed |
+| **All attempts identical** | Low temperature or narrow spec | Hash comparison | Increase temperature, add random mutations |
+| **Context too large** | Spec + codebase exceeds limits | Token count | Chunk codebase, prioritize relevant files |
+| **Cost explosion** | N=100 is expensive | Cost tracking | Configurable N, cost ceiling, warn before expensive runs |
+
+**Recovery**: Generation failures are expected. Log them, continue with successful attempts. If all fail, report to human.
+
+### 3.3 Reality Harness Failures
+
+| Failure | Cause | Detection | Mitigation |
+|---------|-------|-----------|------------|
+| **Workspace creation fails** | Disk full, permissions | I/O errors | Clean old workspaces, report disk issue |
+| **Tests hang** | Infinite loop in generated code | Timeout (30s default) | Kill process, mark attempt failed |
+| **Tests crash process** | Segfault, OOM | Process exit code | Isolate in subprocess, mark failed |
+| **Flaky tests** | Non-deterministic | Different results on rerun | Run 3x, require 2/3 pass |
+| **Missing dependencies** | Generated code needs packages | Import errors | Either fail or auto-install (configurable) |
+| **Type checker crashes** | Invalid TypeScript | Process crash | Mark failed, not a verification pass |
+
+**Recovery**: Reality harness should be extremely defensive. Every failure mode = attempt marked failed, not system crash.
+
+### 3.4 Survivor Pool Failures
+
+| Failure | Cause | Detection | Mitigation |
+|---------|-------|-----------|------------|
+| **Zero survivors** | All attempts failed | Empty survivor list | Report top 3 failures with reasons to human |
+| **All survivors identical** | Low variation in generation | Hash comparison | Report "low diversity", suggest spec changes |
+| **Ranking metric fails** | Can't measure simplicity/perf | Metric returns null | Exclude that metric, weight others higher |
+| **Too many survivors** | Thousands passed | Count > threshold | Aggressive ranking, only show top K |
+
+**Recovery**: Zero survivors is informative. Show failure patterns. Human redirects.
+
+### 3.5 Human Judgment Failures
+
+| Failure | Cause | Detection | Mitigation |
+|---------|-------|-----------|------------|
+| **Human unresponsive** | AFK, distracted | Timeout (configurable) | Send notification, wait |
+| **Human rejects all survivors** | None are acceptable | "reject all" action | Log feedback, ask for redirect or new constraints |
+| **Infinite refinement loop** | Human keeps refining | Loop count > threshold | Warn "5 refinements, consider restart" |
+| **Conflicting judgments** | Human says accept then reject | Action log analysis | Use latest judgment, log conflict |
+
+**Recovery**: Human is always in control. System waits patiently. Never auto-proceed without human.
+
+### 3.6 Database Failures
+
+| Failure | Cause | Detection | Mitigation |
+|---------|-------|-----------|------------|
+| **DB locked** | Concurrent writes | SQLITE_BUSY | Retry with backoff, use WAL mode |
+| **DB corrupted** | Crash during write | Integrity check fails | Restore from backup, warn human |
+| **Disk full** | No space | Write fails | Clean old sessions, alert human |
+| **Schema mismatch** | Plugin updated | Version check | Auto-migrate or fail with clear message |
+
+**Recovery**: Database is critical. Use WAL mode. Backup before migrations. Never lose human's work.
+
+---
+
+## 4. EDGE CASES
+
+### 4.1 Extreme Inputs
+
+| Edge Case | Handling |
+|-----------|----------|
+| **Empty intent** | "I need more information. What do you want to build?" |
+| **Massive intent** (10k+ chars) | Truncate to 10k, summarize rest |
+| **Intent in non-English** | Process anyway (AI handles multilingual) |
+| **Intent with code blocks** | Extract code as example/constraint |
+| **Intent references external URLs** | Fetch and include (with permission) |
+| **Intent references images** | Not supported, ask for text description |
+
+### 4.2 Extreme Codebase
+
+| Edge Case | Handling |
+|-----------|----------|
+| **Empty codebase** | Valid - we're creating from scratch |
+| **Massive codebase** (100k+ files) | Intelligent filtering: prioritize by relevance |
+| **Binary files** | Skip, only process text |
+| **Minified code** | Skip, not useful for pattern extraction |
+| **No package.json/tsconfig** | Infer settings or ask human |
+| **Monorepo** | Ask which package to focus on |
+
+### 4.3 Extreme Generation
+
+| Edge Case | Handling |
+|-----------|----------|
+| **N=1** | Valid, just not parallel. Works fine. |
+| **N=1000** | Warn about cost/time, require confirmation |
+| **All strategies fail** | Report which strategies failed and why |
+| **One strategy dominates** | Fine, just means that approach works |
+| **Mutation creates duplicates** | Dedupe by content hash |
+
+### 4.4 Extreme Verification
+
+| Edge Case | Handling |
+|-----------|----------|
+| **No tests in spec** | Fail - can't verify without assertions |
+| **Tests take 10+ minutes** | Timeout, mark failed, suggest faster tests |
+| **Tests require network** | Configurable: allow or mock |
+| **Tests require DB** | Configurable: spin up test DB or mock |
+| **Tests modify real data** | FORBIDDEN - always use isolated workspace |
+
+---
+
+## 5. PARALLEL EXECUTION DESIGN
+
+### 5.1 Generation Parallelism
 
 ```typescript
-type Specification = {
-  // What success looks like (testable)
-  assertions: Assertion[]
+async function generateMany(spec: Specification, n: number): Promise<Attempt[]> {
+  const strategies = distributeStrategies(n);
+  // strategies = { vanilla: 20, minimal: 15, defensive: 15, ... }
 
-  // Generated test file that verifies the implementation
-  verificationTests: string
+  const promises: Promise<Attempt>[] = [];
 
-  // Type signature that must be satisfied
-  typeContract: string
-
-  // Files that can be created/modified
-  allowedFiles: string[]
-
-  // Files that must not be touched
-  forbiddenFiles: string[]
-
-  // Patterns to follow (extracted from codebase)
-  patterns: Pattern[]
-
-  // The human's original intent (for reference)
-  originalIntent: string
-}
-
-type Assertion = {
-  description: string           // "User can register with email/password"
-  testCode: string              // Actual test that verifies this
-  weight: number                // How important (1-10)
-}
-```
-
-**The compiler's job**:
-1. Parse the codebase to understand existing patterns
-2. Identify relevant files and their interfaces
-3. Generate test assertions from "done_when" criteria
-4. Create a verification harness that can check any implementation
-5. Define boundaries (what can/cannot change)
-
-**This is the hardest part**. Getting intent→spec right determines everything downstream.
-
----
-
-### 3.3 Generation Swarm
-
-**What it is**: Parallel AI generation of N implementations.
-
-**Input**: Specification
-
-**Output**: N implementation attempts
-
-```typescript
-type Attempt = {
-  id: string
-  files: FileChange[]           // The actual code changes
-  approach: string              // Brief description of strategy
-  confidence: number            // AI's self-assessed confidence
-}
-
-type FileChange = {
-  path: string
-  action: "create" | "modify" | "delete"
-  content: string
-}
-```
-
-**Generation strategies** (run in parallel):
-
-| Strategy | Description | Count |
-|----------|-------------|-------|
-| Vanilla | Straightforward implementation | 20 |
-| Minimal | Fewest lines possible | 15 |
-| Defensive | Maximum error handling | 15 |
-| Patterns | Copy patterns from codebase | 20 |
-| Mutations | Variations of promising attempts | 20 |
-| Adversarial | Try to break the spec | 10 |
-
-**Key principle**: No judgment during generation. Generate volume. Let reality filter.
-
----
-
-### 3.4 Reality Harness
-
-**What it is**: Parallel execution of all attempts against verification.
-
-**Verification pipeline** (for each attempt):
-
-```
-Attempt
-   │
-   ├─→ Apply changes to temp workspace
-   │
-   ├─→ Type check (tsc --noEmit)
-   │      └─→ Pass/Fail + errors
-   │
-   ├─→ Lint (eslint/biome)
-   │      └─→ Pass/Fail + warnings
-   │
-   ├─→ Unit tests (bun test)
-   │      └─→ Pass/Fail + coverage
-   │
-   ├─→ Specification tests (from compiler)
-   │      └─→ Pass/Fail + which assertions
-   │
-   ├─→ Property tests (if applicable)
-   │      └─→ Pass/Fail + counterexamples
-   │
-   └─→ Benchmarks (if applicable)
-          └─→ Metrics: time, memory, size
-```
-
-**Output per attempt**:
-
-```typescript
-type VerificationResult = {
-  attemptId: string
-  passed: boolean
-
-  checks: {
-    typecheck: CheckResult
-    lint: CheckResult
-    unitTests: CheckResult
-    specTests: CheckResult
-    propertyTests: CheckResult | null
-    benchmarks: BenchmarkResult | null
+  for (const [strategy, count] of Object.entries(strategies)) {
+    for (let i = 0; i < count; i++) {
+      promises.push(
+        generateOne(spec, strategy, i)
+          .catch(err => {
+            log.warn(`Generation failed: ${strategy}#${i}`, err);
+            return null; // Don't fail the whole batch
+          })
+      );
+    }
   }
 
-  // How many of the original "done_when" criteria passed
-  assertionsPassed: number
-  assertionsTotal: number
-
-  // Failure details if not passed
-  failureReason: string | null
+  const results = await Promise.all(promises);
+  return results.filter((r): r is Attempt => r !== null);
 }
 ```
 
-**Key principle**: Reality is the only judge. Not the AI, not the human, not "best practices."
-
----
-
-### 3.5 Survivor Pool
-
-**What it is**: Filters and ranks passing attempts.
-
-**Filtering**: Only attempts where `passed === true`
-
-**Ranking criteria**:
-
-| Criterion | Weight | Measurement |
-|-----------|--------|-------------|
-| Assertions passed | 40% | Count of passing spec assertions |
-| Simplicity | 25% | Lines of code, cyclomatic complexity |
-| Performance | 15% | Benchmark results (if available) |
-| Readability | 10% | Heuristics or AI assessment |
-| Test coverage | 10% | Coverage of new code |
-
-**Output**: Top K attempts (default K=5)
+### 5.2 Verification Parallelism
 
 ```typescript
-type Survivor = {
-  attempt: Attempt
-  result: VerificationResult
-  rank: number
-  scores: {
-    assertions: number
-    simplicity: number
-    performance: number
-    readability: number
-    coverage: number
-    overall: number
-  }
-}
-```
+async function verifyAll(
+  attempts: Attempt[],
+  spec: Specification
+): Promise<VerificationResult[]> {
+  // Limit concurrency to avoid overwhelming system
+  const CONCURRENCY = 10;
+  const semaphore = new Semaphore(CONCURRENCY);
 
----
-
-## 4. THE LOOP
-
-```typescript
-async function manifest(intent: Intent): Promise<Artifact> {
-  // Step 1: Compile intent to specification
-  const spec = await compileIntentToSpec(intent);
-
-  // Present spec to human for validation
-  const specApproved = await humanValidateSpec(spec);
-  if (!specApproved.approved) {
-    // Human refines intent, try again
-    return manifest(specApproved.refinedIntent);
-  }
-
-  // Step 2: Main generation loop
-  while (true) {
-    // Generate many attempts in parallel
-    const attempts = await generateMany(spec, { n: 100 });
-
-    // Verify all attempts against reality
-    const results = await verifyAll(attempts, spec);
-
-    // Filter to survivors
-    const survivors = results.filter(r => r.passed);
-
-    // Rank and take top K
-    const topK = rankSurvivors(survivors).slice(0, 5);
-
-    if (topK.length === 0) {
-      // Nothing passed. Show failures to human for redirect.
-      const redirect = await humanHandleNoSurvivors(results);
-      if (redirect.action === "refine_spec") {
-        spec = await compileIntentToSpec(redirect.newIntent);
-        continue;
-      } else if (redirect.action === "abort") {
-        throw new Error("Human aborted: no viable solutions");
+  const promises = attempts.map(attempt =>
+    semaphore.acquire().then(async release => {
+      try {
+        return await verifyOne(attempt, spec);
+      } finally {
+        release();
       }
-    }
+    })
+  );
 
-    // Present survivors to human
-    const judgment = await humanJudge(topK);
+  return Promise.all(promises);
+}
+```
 
-    switch (judgment.decision) {
-      case "accept":
-        // Human picked a winner
-        return applyAttempt(judgment.selected);
+### 5.3 Workspace Isolation
 
-      case "refine":
-        // Human wants variations on a theme
-        spec = refineSpec(spec, judgment.refinement);
-        continue;
+```typescript
+async function verifyOne(
+  attempt: Attempt,
+  spec: Specification
+): Promise<VerificationResult> {
+  // Create isolated workspace
+  const workspace = await createWorkspace(attempt.id);
 
-      case "redirect":
-        // Human wants a completely different angle
-        spec = await compileIntentToSpec(judgment.newIntent);
-        continue;
-    }
+  try {
+    // Copy base codebase
+    await copyCodebase(workspace);
+
+    // Apply attempt's changes
+    await applyChanges(workspace, attempt.files);
+
+    // Write spec tests
+    await writeFile(
+      path.join(workspace, '__spec_tests__/spec.test.ts'),
+      spec.verificationTests
+    );
+
+    // Run verification pipeline
+    const typecheck = await runTypecheck(workspace);
+    const lint = await runLint(workspace);
+    const unitTests = await runUnitTests(workspace);
+    const specTests = await runSpecTests(workspace);
+
+    return {
+      attemptId: attempt.id,
+      passed: typecheck.passed && lint.passed && unitTests.passed && specTests.passed,
+      checks: { typecheck, lint, unitTests, specTests },
+      assertionsPassed: specTests.passed ? spec.assertions.length : 0,
+      assertionsTotal: spec.assertions.length,
+      failureReason: getFirstFailure(typecheck, lint, unitTests, specTests)
+    };
+  } finally {
+    // Always cleanup
+    await removeWorkspace(workspace);
   }
 }
 ```
 
 ---
 
-## 5. WHAT THE PLUGIN ACTUALLY DOES
+## 6. OPENCODE PLUGIN STRUCTURE
 
-Given this architecture, the **Planning Plugin** is specifically the **Intent Compiler** component.
-
-### Plugin Interface
+Following the single-file pattern from `hypr-notifier.ts`:
 
 ```typescript
+// src/manifest-plugin.ts
+
 import type { Plugin } from "@opencode-ai/plugin"
 
-export const PlanningPlugin: Plugin = async () => {
+// ============================================================
+// SECTION 1: TYPES (100 lines)
+// ============================================================
+type Intent = Readonly<{ /* ... */ }>
+type Specification = Readonly<{ /* ... */ }>
+type Attempt = Readonly<{ /* ... */ }>
+type VerificationResult = Readonly<{ /* ... */ }>
+type Survivor = Readonly<{ /* ... */ }>
+type Judgment = Readonly<{ /* ... */ }>
+
+// ============================================================
+// SECTION 2: DATABASE (150 lines)
+// ============================================================
+class Database {
+  private db: BunSQLite
+  constructor(path: string) { /* ... */ }
+
+  // Intent operations
+  createIntent(intent: Intent): Promise<string>
+  getIntent(id: string): Promise<Intent | null>
+  updateIntentStatus(id: string, status: string): Promise<void>
+
+  // Specification operations
+  createSpec(spec: Specification): Promise<string>
+  getSpecForIntent(intentId: string): Promise<Specification | null>
+
+  // Attempt operations
+  createAttempts(attempts: Attempt[]): Promise<void>
+  getAttemptsForSpec(specId: string): Promise<Attempt[]>
+  updateAttemptStatus(id: string, status: string): Promise<void>
+
+  // Verification operations
+  createVerification(result: VerificationResult): Promise<string>
+
+  // Survivor operations
+  createSurvivors(survivors: Survivor[]): Promise<void>
+  getSurvivorsForIntent(intentId: string): Promise<Survivor[]>
+
+  // Judgment operations
+  createJudgment(judgment: Judgment): Promise<string>
+}
+
+// ============================================================
+// SECTION 3: INTENT COMPILER (200 lines)
+// ============================================================
+async function parseIntent(message: string): Promise<ParsedIntent>
+async function analyzeCodebase(intent: ParsedIntent): Promise<CodebaseAnalysis>
+async function generateSpecification(
+  intent: ParsedIntent,
+  analysis: CodebaseAnalysis
+): Promise<Specification>
+async function validateSpecification(spec: Specification): Promise<ValidationResult>
+async function compileIntentToSpec(message: string): Promise<Specification>
+
+// ============================================================
+// SECTION 4: GENERATION SWARM (150 lines)
+// ============================================================
+type Strategy = "vanilla" | "minimal" | "defensive" | "patterns" | "mutation" | "adversarial"
+function distributeStrategies(n: number): Record<Strategy, number>
+async function generateOne(spec: Specification, strategy: Strategy): Promise<Attempt>
+async function generateMany(spec: Specification, n: number): Promise<Attempt[]>
+
+// ============================================================
+// SECTION 5: REALITY HARNESS (200 lines)
+// ============================================================
+async function createWorkspace(attemptId: string): Promise<string>
+async function applyChanges(workspace: string, files: FileChange[]): Promise<void>
+async function runTypecheck(workspace: string): Promise<CheckResult>
+async function runLint(workspace: string): Promise<CheckResult>
+async function runUnitTests(workspace: string): Promise<CheckResult>
+async function runSpecTests(workspace: string): Promise<CheckResult>
+async function verifyOne(attempt: Attempt, spec: Specification): Promise<VerificationResult>
+async function verifyAll(attempts: Attempt[], spec: Specification): Promise<VerificationResult[]>
+
+// ============================================================
+// SECTION 6: SURVIVOR POOL (100 lines)
+// ============================================================
+function scoreSimplicity(attempt: Attempt): number
+function scoreReadability(attempt: Attempt): number
+function rankSurvivors(results: VerificationResult[]): Survivor[]
+function getTopK(survivors: Survivor[], k: number): Survivor[]
+
+// ============================================================
+// SECTION 7: ORCHESTRATOR (150 lines)
+// ============================================================
+async function manifest(message: string): Promise<Artifact>
+async function handleHumanJudgment(judgment: Judgment): Promise<void>
+async function handleRefinement(refinement: string): Promise<void>
+async function handleRedirect(newIntent: string): Promise<void>
+
+// ============================================================
+// SECTION 8: PLUGIN EXPORT (50 lines)
+// ============================================================
+export const ManifestPlugin: Plugin = async () => {
+  const db = new Database(getDbPath())
+
   return {
-    // Hook into user messages to detect intent
+    name: "manifest",
+
+    // Detect significant feature requests
     message: async ({ message, context }) => {
-      const intent = parseIntent(message);
-
-      if (intent.isSignificantFeature) {
-        // Compile to specification
-        const spec = await compileIntentToSpec(intent, context);
-
-        // Return the specification for the generation swarm
-        return {
-          type: "planning.spec.ready",
-          properties: { spec }
-        };
+      if (isSignificantFeature(message)) {
+        return manifest(message)
       }
     },
 
-    // Hook into events from other components
+    // Handle events from the system
     event: async ({ event }) => {
       switch (event.type) {
-        case "generation.complete":
-          // Swarm finished generating attempts
-          break;
-        case "verification.complete":
-          // Reality harness finished
-          break;
         case "human.judgment":
-          // Human made a decision
-          break;
+          await handleHumanJudgment(event.properties)
+          break
+        // ...
       }
     }
-  };
-};
+  }
+}
+
+export default ManifestPlugin
 ```
 
-### The Compiler's Prompts
+---
 
-Instead of prompts for "rounds of planning," we need prompts for **compiling intent to specification**.
-
-#### Prompt 1: Parse Intent
-
-```markdown
-# PARSE INTENT
-
-You are parsing a human's intent into structured form.
-
-## Input
-The human said: "{message}"
-
-## Output
-
-Extract:
-
-1. **Core Intent**: What do they fundamentally want? (1 sentence)
-
-2. **Constraints**:
-   - must: Things that must be true
-   - must_not: Things that must not happen
-
-3. **Success Criteria**: How will we know it's done?
-   - List specific, testable conditions
-
-4. **Ambiguities**: What's unclear that needs clarification?
-
-5. **Scope**: What's explicitly in/out?
-
-Return as structured YAML.
-```
-
-#### Prompt 2: Analyze Codebase
-
-```markdown
-# ANALYZE CODEBASE FOR INTENT
-
-Given:
-- Intent: {intent}
-- Codebase files: {file_list}
-
-Determine:
-
-1. **Relevant Files**: Which files relate to this intent?
-   - List paths and why they're relevant
-
-2. **Patterns**: What patterns exist that should be followed?
-   - Code style, architecture, naming conventions
-
-3. **Interfaces**: What existing interfaces must be satisfied?
-   - Types, APIs, contracts
-
-4. **Forbidden Zones**: What must NOT be changed?
-   - Critical files, stable APIs
-
-5. **Integration Points**: Where does new code connect to existing?
-```
-
-#### Prompt 3: Generate Specification
-
-```markdown
-# GENERATE EXECUTABLE SPECIFICATION
-
-Given:
-- Intent: {intent}
-- Codebase analysis: {analysis}
-
-Create a specification that a generation swarm can implement against.
-
-## Assertions
-
-For each success criterion, write a test:
+## 7. RUNTIME MEMORY STATE
 
 ```typescript
-// Assertion: "User can register with email/password"
-test("user registration", async () => {
-  const result = await register("test@example.com", "password123");
-  expect(result.success).toBe(true);
-  expect(result.user.email).toBe("test@example.com");
-});
+// In-memory state for current session
+type RuntimeState = {
+  // Current manifest operation (if any)
+  currentManifest: {
+    intentId: string
+    status: ManifestStatus
+    phase: "compiling" | "generating" | "verifying" | "ranking" | "judging"
+    progress: {
+      total: number
+      completed: number
+      failed: number
+    }
+  } | null
+
+  // Active workspaces (for cleanup on crash)
+  activeWorkspaces: Set<string>
+
+  // Pending AI calls (for rate limiting)
+  pendingCalls: number
+
+  // Cost tracking
+  estimatedCost: number
+  costCeiling: number
+}
+
+let state: RuntimeState = {
+  currentManifest: null,
+  activeWorkspaces: new Set(),
+  pendingCalls: 0,
+  estimatedCost: 0,
+  costCeiling: 10.00 // $10 default ceiling
+}
 ```
 
-## Type Contract
+---
 
-Define the types that must exist:
+## 8. CONFIGURATION
 
 ```typescript
-type RegisterResult = {
-  success: boolean;
-  user?: User;
-  error?: string;
-};
+type ManifestConfig = Readonly<{
+  // Database
+  dbPath: string                    // Default: ~/.config/opencode/manifest/manifest.db
 
-function register(email: string, password: string): Promise<RegisterResult>;
+  // Generation
+  defaultN: number                  // Default: 50
+  maxN: number                      // Default: 200
+  costCeiling: number               // Default: 10.00 ($)
+
+  // Verification
+  verificationTimeout: number       // Default: 30000 (30s)
+  verificationConcurrency: number   // Default: 10
+  flakyTestRetries: number          // Default: 3
+
+  // Survivor pool
+  topK: number                      // Default: 5
+  rankingWeights: {
+    assertions: number              // Default: 0.4
+    simplicity: number              // Default: 0.25
+    performance: number             // Default: 0.15
+    readability: number             // Default: 0.1
+    coverage: number                // Default: 0.1
+  }
+
+  // Behavior
+  autoInstallDependencies: boolean  // Default: false
+  allowNetworkInTests: boolean      // Default: false
+  cleanupWorkspaces: boolean        // Default: true
+
+  // Notifications
+  notifications: boolean            // Default: true
+}>
+
+const DEFAULT_CONFIG: ManifestConfig = Object.freeze({
+  dbPath: path.join(homedir(), '.config/opencode/manifest/manifest.db'),
+  defaultN: 50,
+  maxN: 200,
+  costCeiling: 10.00,
+  verificationTimeout: 30000,
+  verificationConcurrency: 10,
+  flakyTestRetries: 3,
+  topK: 5,
+  rankingWeights: {
+    assertions: 0.4,
+    simplicity: 0.25,
+    performance: 0.15,
+    readability: 0.1,
+    coverage: 0.1
+  },
+  autoInstallDependencies: false,
+  allowNetworkInTests: false,
+  cleanupWorkspaces: true,
+  notifications: true
+})
 ```
 
-## Allowed Files
+---
 
-List files that can be created or modified:
-- src/auth/register.ts (create)
-- src/routes/auth.ts (modify)
+## 9. STRESS TEST SCENARIOS
 
-## Forbidden Files
+### Scenario 1: 100 Parallel Generations
+- **Setup**: N=100, spec requires complex feature
+- **Expected**: 100 AI calls complete in ~30-60s
+- **Monitored**: Memory usage, API rate limits, error rate
+- **Pass criteria**: <5% failures, no crashes, <$5 cost
 
-List files that must not be touched:
-- src/models/user.ts (stable schema)
-- src/db/migrations/* (no schema changes)
-```
+### Scenario 2: Zero Survivors
+- **Setup**: Impossible spec (contradictory requirements)
+- **Expected**: All 50 attempts fail verification
+- **Monitored**: Failure reasons captured, human notified
+- **Pass criteria**: Clear failure report, no zombie processes
 
-#### Prompt 4: Validate Specification
+### Scenario 3: Flaky Tests
+- **Setup**: Spec with timing-dependent tests
+- **Expected**: Some attempts pass on retry
+- **Monitored**: Flaky detection triggers re-run
+- **Pass criteria**: 2/3 consistent results accepted
 
-```markdown
-# VALIDATE SPECIFICATION
+### Scenario 4: Massive Codebase
+- **Setup**: 10k+ files in codebase
+- **Expected**: Intelligent filtering, reasonable token usage
+- **Monitored**: Context size, relevance of included files
+- **Pass criteria**: <50k tokens per generation call
 
-Before sending to generation swarm, verify:
+### Scenario 5: Infinite Refinement
+- **Setup**: Human keeps saying "not quite"
+- **Expected**: Warning after 5 refinements
+- **Monitored**: Loop count, human frustration signals
+- **Pass criteria**: System remains stable, suggests restart
 
-1. **Testable**: Every assertion has executable test code?
-2. **Bounded**: Allowed/forbidden files clearly defined?
-3. **Consistent**: No contradictions in constraints?
-4. **Sufficient**: Passing all assertions = actually done?
-5. **Minimal**: No unnecessary complexity in spec?
-
-If issues found, fix them. If clarification needed from human, list questions.
-```
+### Scenario 6: Crash Recovery
+- **Setup**: Kill plugin mid-verification
+- **Expected**: On restart, cleanup orphan workspaces, resume or restart intent
+- **Monitored**: Workspace cleanup, DB integrity
+- **Pass criteria**: No orphan files, DB consistent
 
 ---
 
-## 6. INTEGRATION WITH ECOSYSTEM
+## 10. ROUND 4 SUMMARY
 
-### Events Emitted
+### What This Round Covered
 
-| Event | When | Consumed By |
-|-------|------|-------------|
-| `planning.intent.parsed` | Intent extracted from message | UI |
-| `planning.spec.ready` | Specification compiled | Generation Swarm |
-| `planning.clarification.needed` | Ambiguity found | Human Terminal |
-| `planning.spec.validated` | Spec ready for generation | Orchestrator |
+| Area | Details |
+|------|---------|
+| **Database schema** | 6 tables, indexes, full audit trail |
+| **Failure modes** | 25+ failure scenarios with mitigations |
+| **Edge cases** | Extreme inputs, codebases, generation counts |
+| **Parallelism** | Semaphore-controlled concurrent execution |
+| **Plugin structure** | ~1100 lines, 8 sections, single file |
+| **Memory state** | Runtime tracking for progress, cost, cleanup |
+| **Configuration** | 15+ settings with sensible defaults |
+| **Stress tests** | 6 scenarios to validate robustness |
 
-### Events Consumed
+### Open Questions Resolved
 
-| Event | From | Action |
-|-------|------|--------|
-| `human.intent` | Human Terminal | Start compilation |
-| `human.clarification` | Human Terminal | Incorporate and continue |
-| `human.refine` | Judgment | Update spec |
-| `generation.complete` | Swarm | Trigger verification |
-| `verification.complete` | Harness | Trigger ranking |
+| Question | Answer |
+|----------|--------|
+| Full system or just compiler? | **Full system** |
+| Where does state live? | **SQLite DB + memory runtime** |
+| How many parallel calls? | **Configurable, default 50, max 200** |
+| OpenCode patterns? | **Yes, single-file plugin** |
 
----
+### What Round 5 Will Cover
 
-## 7. WHAT STILL NEEDS DESIGN
-
-This plugin is ONE component. The full system needs:
-
-| Component | Status | Notes |
-|-----------|--------|-------|
-| Intent Terminal | Not designed | Human input interface |
-| Intent Compiler | This plugin | Designed here |
-| Generation Swarm | Not designed | Parallel AI generation |
-| Reality Harness | Not designed | Parallel verification |
-| Survivor Pool | Not designed | Ranking and filtering |
-| Orchestrator | Not designed | Coordinates all components |
-
-### Questions for Human
-
-1. Are we building the full system or just the Intent Compiler plugin?
-2. How does generation swarm actually spawn parallel AI calls?
-3. What's the interface between components? (Events? Direct calls? Files?)
-4. Where does state live? (Memory? Disk? Database?)
-5. Is this an OpenCode plugin or a standalone system?
+- Final implementation spec
+- Exact prompt text for each AI call
+- Test file structure
+- Deployment instructions
+- User documentation
 
 ---
 
-## 8. ROUND 3 SUMMARY
+**This is Round 4. Review the failure modes and stress tests.**
 
-### What Changed
-
-| Before | After |
-|--------|-------|
-| 5 serial rounds of planning | Intent → Spec compilation |
-| Human reviews every iteration | Human judges only survivors |
-| AI produces 1 thing at a time | AI produces N things in parallel |
-| Planning is the goal | Specification is the goal |
-| Human iterates | Reality iterates |
-
-### The Core Insight
-
-> You don't iterate. Reality iterates.
-> You don't generate. AI generates.
-> You don't verify. Tests verify.
->
-> You ONLY do what only you can do:
-> - Know what you want
-> - Recognize when you have it
-> - Redirect when the whole approach is wrong
-
----
-
-**This is Round 3. Review and provide feedback.**
-
-**To proceed**: Say "approve round 3" or redirect the design.
+**To proceed**: Say "approve round 4" to move to Round 5 (final implementation spec).

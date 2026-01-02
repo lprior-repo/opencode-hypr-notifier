@@ -1,311 +1,581 @@
 # Planning Plugin Design Document
 
-## Version: Round 1 - Initial Architecture
+## Version: Round 2 - Full Prompts & Clarity Focus
+
+**Changes from Round 1:**
+- Session scope: Per-feature (not per-conversation)
+- Removed enforcement complexity
+- Added complete prompts for all 5 rounds
+- Focused on clarity and usability
 
 ---
 
-## 1. VISION & PURPOSE
+## 1. VISION
 
-### Problem Statement
-AI assistants often jump directly into implementation without adequate planning. This leads to:
-- Incomplete designs that require rework
-- Missed edge cases discovered late
-- User frustration from half-baked solutions
-- Wasted effort on wrong approaches
+### What This Plugin Does
 
-### Solution
-A **Planning Plugin** that:
-1. Forces structured iteration through design phases
-2. Requires explicit user approval at each stage
-3. Tracks planning progress persistently
-4. Sends notifications for planning milestones
-5. Prevents implementation until design is "approved"
+When an AI assistant receives a request for a significant feature, this plugin guides it through **5 structured rounds of planning** before any implementation begins. Each round has a specific purpose and produces concrete artifacts.
+
+### Why It Matters
+
+- Forces thorough thinking before coding
+- Catches design flaws early
+- Ensures user alignment at every step
+- Creates documentation as a byproduct
+- Reduces rework and wasted effort
 
 ---
 
-## 2. CORE CONCEPT: PLANNING ROUNDS
+## 2. THE 5 ROUNDS
 
-### The 5-Round Framework
-
-| Round | Name | Focus | Exit Criteria |
-|-------|------|-------|---------------|
-| 1 | **Discovery** | Understand requirements, explore constraints | User confirms understanding |
-| 2 | **Architecture** | High-level design, component breakdown | User approves structure |
-| 3 | **Specification** | Detailed interfaces, data flows, APIs | User validates details |
-| 4 | **Edge Cases** | Failure modes, error handling, security | User accepts risk assessment |
-| 5 | **Finalization** | Implementation plan, test strategy | User authorizes implementation |
-
-### Round Progression Rules
-- Cannot skip rounds
-- Must receive explicit "approve" to advance
-- Can regress to earlier rounds if issues found
-- Each round builds on previous approvals
+| Round | Name | Purpose | Output |
+|-------|------|---------|--------|
+| 1 | **Discovery** | Understand what we're building and why | Requirements document |
+| 2 | **Architecture** | Design the high-level structure | Component diagram + decisions |
+| 3 | **Specification** | Define the details | API contracts, data models |
+| 4 | **Edge Cases** | Identify what could go wrong | Risk register + mitigations |
+| 5 | **Implementation Plan** | Create the execution roadmap | Ordered task list |
 
 ---
 
-## 3. PLUGIN ARCHITECTURE
+## 3. COMPLETE ROUND PROMPTS
 
-### 3.1 Event Types (Emitted by Plugin)
+### ROUND 1: DISCOVERY
 
-```typescript
-type PlanningEvent =
-  | { type: "planning.round.started"; properties: { round: number; name: string; sessionId: string } }
-  | { type: "planning.round.completed"; properties: { round: number; approved: boolean; sessionId: string } }
-  | { type: "planning.feedback.requested"; properties: { round: number; question: string; sessionId: string } }
-  | { type: "planning.approved"; properties: { totalRounds: number; sessionId: string } }
-  | { type: "planning.regressed"; properties: { fromRound: number; toRound: number; reason: string; sessionId: string } }
+```markdown
+# ROUND 1: DISCOVERY
+
+I need to fully understand what we're building before designing a solution.
+
+## Questions I Need Answered
+
+### The Problem
+1. What specific problem are you trying to solve?
+2. What's happening today that's painful or missing?
+3. Who experiences this problem? (end users, developers, ops?)
+
+### The Solution Vision
+4. What does success look like when this is done?
+5. How will you know it's working correctly?
+6. What's the simplest version that would be valuable?
+
+### Constraints
+7. What technologies must we use? (language, framework, infra)
+8. What technologies must we avoid?
+9. Are there performance requirements? (latency, throughput, scale)
+10. Are there security or compliance requirements?
+
+### Context
+11. Is there existing code that relates to this feature?
+12. Are there patterns elsewhere in the codebase I should follow?
+13. What have you already tried or considered?
+
+## What I'll Produce
+
+Once you answer these questions, I'll create:
+
+- **Problem Statement**: A clear 2-3 sentence description of what we're solving
+- **Success Criteria**: Measurable outcomes that define "done"
+- **Constraints List**: Hard boundaries I must respect
+- **Scope Definition**: What's in and what's explicitly out
+
+---
+
+**Please answer the questions above, then say "approve round 1" to continue.**
 ```
 
-### 3.2 Event Types (Consumed by Plugin)
+---
 
-```typescript
-type UserFeedbackEvent =
-  | { type: "user.planning.approve"; properties: { round: number; sessionId: string } }
-  | { type: "user.planning.reject"; properties: { round: number; feedback: string; sessionId: string } }
-  | { type: "user.planning.regress"; properties: { toRound: number; reason: string; sessionId: string } }
+### ROUND 2: ARCHITECTURE
+
+```markdown
+# ROUND 2: ARCHITECTURE
+
+Based on your requirements from Round 1, I'll now design the high-level structure.
+
+## My Proposed Architecture
+
+### Components
+I'll define each major component:
+
+| Component | Responsibility | Inputs | Outputs |
+|-----------|---------------|--------|---------|
+| [Name] | [What it does] | [What it receives] | [What it produces] |
+
+### Component Relationships
+```
+[Diagram showing how components connect]
 ```
 
-### 3.3 State Management
+### Key Architectural Decisions
+
+For each significant decision, I'll explain:
+
+| Decision | Options Considered | Choice | Rationale |
+|----------|-------------------|--------|-----------|
+| [What needed deciding] | [Option A, B, C] | [Selected] | [Why this one] |
+
+### Data Flow
+
+1. [Entry point] receives [input]
+2. [Component A] processes it by [action]
+3. [Component B] transforms it to [output]
+4. [Exit point] returns [result]
+
+### Technology Choices
+
+| Need | Technology | Why |
+|------|------------|-----|
+| [Requirement] | [Tool/Library] | [Justification] |
+
+## What I Need From You
+
+1. Does this structure make sense for your codebase?
+2. Are the component boundaries appropriate?
+3. Do the technology choices align with your preferences?
+4. Is there existing code I should integrate with rather than build new?
+
+---
+
+**Review the architecture above. Provide feedback or say "approve round 2" to continue.**
+```
+
+---
+
+### ROUND 3: SPECIFICATION
+
+```markdown
+# ROUND 3: SPECIFICATION
+
+Now I'll define the precise details of each component.
+
+## Data Models
+
+### [Model Name]
+```typescript
+type ModelName = {
+  id: string                    // Unique identifier
+  field1: Type                  // Description of field1
+  field2: Type                  // Description of field2
+  createdAt: Date               // When created
+  updatedAt: Date               // When last modified
+}
+```
+
+[Repeat for each data model]
+
+## API Contracts
+
+### [Function/Endpoint Name]
+
+**Purpose**: [What this does]
+
+**Signature**:
+```typescript
+function name(param1: Type, param2: Type): ReturnType
+```
+
+**Parameters**:
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| param1 | Type | Yes | What this parameter controls |
+| param2 | Type | No | Optional behavior modifier |
+
+**Returns**:
+| Condition | Return Value |
+|-----------|--------------|
+| Success | { result: Data } |
+| Not Found | { error: "NOT_FOUND" } |
+| Invalid Input | { error: "INVALID_INPUT", details: string } |
+
+**Example**:
+```typescript
+// Input
+name("value1", { option: true })
+
+// Output
+{ result: { id: "123", status: "complete" } }
+```
+
+[Repeat for each function/endpoint]
+
+## State Management
+
+### State Shape
+```typescript
+type State = {
+  [key]: Type    // Description
+}
+```
+
+### State Transitions
+| Current State | Event | New State | Side Effects |
+|---------------|-------|-----------|--------------|
+| idle | START | running | Initialize resources |
+| running | COMPLETE | done | Cleanup, notify |
+| running | ERROR | failed | Log, cleanup |
+
+## File Structure
+
+```
+src/
+├── [feature]/
+│   ├── types.ts        # Type definitions
+│   ├── [component].ts  # Main implementation
+│   ├── utils.ts        # Helper functions
+│   └── index.ts        # Public exports
+└── __tests__/
+    └── [feature].test.ts
+```
+
+## What I Need From You
+
+1. Do these data models capture everything needed?
+2. Are the API contracts clear and complete?
+3. Does the file structure fit your project conventions?
+4. Any fields, parameters, or behaviors missing?
+
+---
+
+**Review the specifications above. Provide feedback or say "approve round 3" to continue.**
+```
+
+---
+
+### ROUND 4: EDGE CASES
+
+```markdown
+# ROUND 4: EDGE CASES
+
+Before implementation, I need to identify what could go wrong and how to handle it.
+
+## Error Scenarios
+
+### Input Errors
+| Scenario | How It Happens | Detection | Response |
+|----------|---------------|-----------|----------|
+| Invalid input format | User provides malformed data | Validation at entry | Return 400 with details |
+| Missing required field | Required param not provided | Schema validation | List missing fields |
+| Out of range value | Number exceeds limits | Bounds check | Return allowed range |
+
+### System Errors
+| Scenario | How It Happens | Detection | Response |
+|----------|---------------|-----------|----------|
+| Dependency unavailable | External service down | Timeout/connection error | Retry with backoff, then fail gracefully |
+| Resource exhausted | Memory/disk full | Resource monitoring | Reject new requests, alert |
+| Concurrent modification | Race condition | Version check | Retry or conflict error |
+
+### Business Logic Errors
+| Scenario | How It Happens | Detection | Response |
+|----------|---------------|-----------|----------|
+| [Specific to feature] | [Cause] | [Detection method] | [Handling] |
+
+## Security Considerations
+
+| Threat | Risk Level | Mitigation |
+|--------|------------|------------|
+| Injection attacks | High | Input sanitization, parameterized queries |
+| Authentication bypass | High | Validate tokens on every request |
+| Data exposure | Medium | Principle of least privilege |
+| [Feature-specific] | [Level] | [Mitigation] |
+
+## Performance Concerns
+
+| Scenario | Threshold | Detection | Mitigation |
+|----------|-----------|-----------|------------|
+| High load | >100 req/s | Metrics monitoring | Rate limiting, caching |
+| Large payload | >10MB | Size check at entry | Streaming, chunking |
+| Slow dependency | >5s response | Timeout | Circuit breaker |
+
+## Recovery Procedures
+
+### If [Component] Fails
+1. [Immediate action]
+2. [Fallback behavior]
+3. [Recovery steps]
+4. [Verification]
+
+### Data Consistency
+- How do we ensure data stays consistent if a process fails mid-operation?
+- What's the rollback strategy?
+- How do we detect and fix inconsistencies?
+
+## What I Need From You
+
+1. Are there domain-specific edge cases I'm missing?
+2. What error scenarios have you seen in similar features?
+3. Are the security mitigations appropriate for your risk tolerance?
+4. What's your preference for error message verbosity?
+
+---
+
+**Review the edge cases above. Provide feedback or say "approve round 4" to continue.**
+```
+
+---
+
+### ROUND 5: IMPLEMENTATION PLAN
+
+```markdown
+# ROUND 5: IMPLEMENTATION PLAN
+
+All designs are approved. Here's the execution roadmap.
+
+## Implementation Order
+
+I'll implement in this sequence, where each step builds on the previous:
+
+### Phase 1: Foundation
+| Step | Task | Dependencies | Output |
+|------|------|--------------|--------|
+| 1.1 | Create type definitions | None | types.ts |
+| 1.2 | Set up file structure | None | Directory scaffold |
+| 1.3 | Write test fixtures | Types | test-fixtures.ts |
+
+### Phase 2: Core Logic
+| Step | Task | Dependencies | Output |
+|------|------|--------------|--------|
+| 2.1 | Implement [core component] | Types | [file].ts |
+| 2.2 | Write unit tests for core | Core component | [file].test.ts |
+| 2.3 | Implement [next component] | Core component | [file].ts |
+
+### Phase 3: Integration
+| Step | Task | Dependencies | Output |
+|------|------|--------------|--------|
+| 3.1 | Connect components | All components | Integration code |
+| 3.2 | Integration tests | Connected system | integration.test.ts |
+| 3.3 | Error handling | Integration | Error paths tested |
+
+### Phase 4: Polish
+| Step | Task | Dependencies | Output |
+|------|------|--------------|--------|
+| 4.1 | Edge case handling | Core complete | Robust error handling |
+| 4.2 | Performance verification | Integration complete | Benchmarks passing |
+| 4.3 | Documentation | All code complete | README updates |
+
+## Test Strategy
+
+### Unit Tests
+- Each function tested in isolation
+- Mock external dependencies
+- Cover happy path + error cases
+- Target: [X]% code coverage
+
+### Integration Tests
+- Test component interactions
+- Use real dependencies where possible
+- Cover main user flows
+
+### Test Commands
+```bash
+bun test                    # Run all tests
+bun test --watch            # Watch mode
+bun test [file]             # Single file
+```
+
+## Verification Checklist
+
+Before marking complete:
+- [ ] All tests pass
+- [ ] No TypeScript errors
+- [ ] Lint passes
+- [ ] Manual testing of main flow
+- [ ] Edge cases handled
+- [ ] Error messages are clear
+- [ ] Code is readable
+
+## Rollback Plan
+
+If issues are discovered after implementation:
+1. [How to detect problems]
+2. [How to disable/rollback]
+3. [How to fix forward]
+
+---
+
+## PLANNING COMPLETE
+
+All 5 rounds are approved. I have:
+
+1. **Discovery**: Clear requirements and constraints
+2. **Architecture**: Approved component design
+3. **Specification**: Detailed contracts and models
+4. **Edge Cases**: Identified risks and mitigations
+5. **Implementation Plan**: Ordered execution roadmap
+
+**Ready to begin implementation. Say "start implementation" to proceed.**
+```
+
+---
+
+## 4. STATE MANAGEMENT
+
+### Per-Feature Session
+
+Each feature being planned gets its own session:
 
 ```typescript
-type PlanningState = Readonly<{
-  sessionId: string
-  currentRound: number
-  roundHistory: ReadonlyArray<RoundRecord>
-  status: "planning" | "approved" | "implementing"
+type PlanningSession = Readonly<{
+  featureId: string           // Unique ID for this feature
+  featureName: string         // Human-readable name
+  currentRound: 1 | 2 | 3 | 4 | 5
+  rounds: {
+    discovery: RoundState
+    architecture: RoundState
+    specification: RoundState
+    edgeCases: RoundState
+    implementationPlan: RoundState
+  }
+  artifacts: {
+    requirements: string      // From Round 1
+    architecture: string      // From Round 2
+    specification: string     // From Round 3
+    edgeCases: string         // From Round 4
+    implementationPlan: string // From Round 5
+  }
   createdAt: number
   updatedAt: number
 }>
 
-type RoundRecord = Readonly<{
-  round: number
-  name: string
-  startedAt: number
-  completedAt: number | null
-  approved: boolean
-  feedback: string[]
-  artifacts: string[]  // References to design docs
+type RoundState = Readonly<{
+  status: "pending" | "in_progress" | "approved"
+  feedback: string[]          // User feedback incorporated
+  approvedAt: number | null
 }>
 ```
 
-### 3.4 Persistent Storage
+### Storage Location
 
 ```
-~/.config/opencode/planning-sessions/
-├── {sessionId}.json           # Current session state
-├── {sessionId}.history.json   # Full conversation history for session
-└── templates/
-    ├── discovery.md
-    ├── architecture.md
-    ├── specification.md
-    ├── edge-cases.md
-    └── finalization.md
+~/.config/opencode/planning/
+├── sessions/
+│   └── {featureId}.json      # Session state
+└── config.json               # Plugin settings
 ```
 
 ---
 
-## 4. NOTIFICATION INTEGRATION
+## 5. PLUGIN EVENTS
 
-### 4.1 Notification Events
+### Events Emitted
 
-| Event | Urgency | Icon | Message |
-|-------|---------|------|---------|
-| Round Started | normal | `dialog-information` | "Planning Round {n}: {name}" |
-| Feedback Requested | critical | `dialog-question` | "Input needed for Round {n}" |
-| Round Approved | low | `emblem-ok` | "Round {n} approved!" |
-| Planning Complete | normal | `emblem-default` | "All 5 rounds approved - Ready to implement" |
-| Regression | normal | `dialog-warning` | "Regressed to Round {n}" |
+| Event | When | Properties |
+|-------|------|------------|
+| `planning.started` | New planning session begins | `{ featureId, featureName }` |
+| `planning.round.started` | Round begins | `{ featureId, round, roundName }` |
+| `planning.round.approved` | User approves round | `{ featureId, round }` |
+| `planning.complete` | All 5 rounds approved | `{ featureId, featureName }` |
+| `planning.feedback` | User provides feedback | `{ featureId, round, feedback }` |
 
-### 4.2 Integration with hypr-notifier
+### Notification Integration
 
-The planning plugin will emit events that `hypr-notifier` can consume:
+The hypr-notifier can listen for these events:
 
-```typescript
-// In planning-plugin.ts
-async function emitPlanningEvent(event: PlanningEvent): Promise<void> {
-  // Emit to OpenCode event system
-  // hypr-notifier will pick this up
-}
-```
-
----
-
-## 5. USER INTERACTION MODEL
-
-### 5.1 Starting a Planning Session
-
-```
-User: "I want to add authentication to my app"
-
-AI: "This is a significant feature. Starting Planning Mode.
-
-📋 ROUND 1: DISCOVERY
-
-Let me understand your requirements:
-
-1. What authentication methods do you need? (password, OAuth, SSO, etc.)
-2. What's your current user model?
-3. Are there existing auth patterns in your codebase?
-4. What's your security posture? (2FA, session management?)
-
-[Notification: Planning Round 1: Discovery]"
-```
-
-### 5.2 Round Approval Flow
-
-```
-User: "Looks good, approve round 1"
-
-AI: "✅ Round 1 APPROVED
-
-Moving to ROUND 2: ARCHITECTURE
-
-Based on your requirements, I propose:
-[... architectural design ...]
-
-Do you approve this architecture?
-
-[Notification: Planning Round 2: Architecture]"
-```
-
-### 5.3 Rejection/Iteration
-
-```
-User: "No, I don't want OAuth, just email/password"
-
-AI: "📝 Noted. Updating Round 2 design...
-
-[Updated architecture without OAuth]
-
-Do you approve this revised architecture?
-
-[Notification: Feedback incorporated - Round 2 updated]"
-```
+| Event | Notification |
+|-------|--------------|
+| `planning.round.started` | "Planning Round {n}: {name}" |
+| `planning.round.approved` | "Round {n} approved" |
+| `planning.complete` | "Planning complete - Ready to implement" |
 
 ---
 
 ## 6. CONFIGURATION
 
-### 6.1 Config File
+### Config File
 
-`~/.config/opencode/opencode-planning.json`
+`~/.config/opencode/planning/config.json`
 
 ```json
 {
-  "notification": true,
-  "strictMode": true,
-  "requiredRounds": 5,
-  "allowSkipRounds": false,
+  "notifications": true,
   "persistSessions": true,
-  "sessionTimeout": 86400000,
-  "templates": {
-    "discovery": "default",
-    "architecture": "default",
-    "specification": "default",
-    "edgeCases": "default",
-    "finalization": "default"
-  },
-  "urgency": {
-    "roundStart": "normal",
-    "feedbackRequest": "critical",
-    "approval": "low",
-    "complete": "normal"
-  }
+  "defaultRounds": ["discovery", "architecture", "specification", "edgeCases", "implementationPlan"]
 }
 ```
 
-### 6.2 Template System
+### Sensible Defaults
 
-Each round has a template that guides the AI's questions:
-
-```markdown
-<!-- templates/discovery.md -->
-# Discovery Round Template
-
-## Required Questions
-1. What problem are you solving?
-2. Who are the users/stakeholders?
-3. What are the constraints (time, tech, resources)?
-4. What does success look like?
-5. Are there existing patterns to follow?
-
-## Artifacts to Produce
-- [ ] Problem statement
-- [ ] User stories
-- [ ] Constraint list
-- [ ] Success criteria
-```
+All settings have reasonable defaults. The plugin works without any configuration.
 
 ---
 
 ## 7. IMPLEMENTATION STRUCTURE
 
-### 7.1 Single-File Architecture (Required by OpenCode)
-
 ```typescript
-// src/planning-plugin.ts (~500 lines estimated)
+// src/planning-plugin.ts
 
 // ============================================================
-// SECTION 1: TYPES (50 lines)
+// TYPES
 // ============================================================
+type PlanningSession = { /* ... */ }
+type RoundState = { /* ... */ }
+type PlanningEvent = { /* ... */ }
 
 // ============================================================
-// SECTION 2: CONSTANTS (80 lines)
+// CONSTANTS
 // ============================================================
+const ROUND_PROMPTS = {
+  discovery: `...`,
+  architecture: `...`,
+  specification: `...`,
+  edgeCases: `...`,
+  implementationPlan: `...`
+}
+
+const DEFAULT_CONFIG = Object.freeze({ /* ... */ })
 
 // ============================================================
-// SECTION 3: STATE MANAGEMENT (100 lines)
+// STATE
 // ============================================================
+let sessions: Map<string, PlanningSession> = new Map()
+let config: PlanningConfig | null = null
 
 // ============================================================
-// SECTION 4: PERSISTENCE (80 lines)
+// SESSION MANAGEMENT
 // ============================================================
+function createSession(featureId: string, featureName: string): PlanningSession
+function getSession(featureId: string): PlanningSession | null
+function updateSession(featureId: string, updates: Partial<PlanningSession>): void
+function saveSession(session: PlanningSession): Promise<void>
+function loadSession(featureId: string): Promise<PlanningSession | null>
 
 // ============================================================
-// SECTION 5: ROUND HANDLERS (120 lines)
+// ROUND HANDLERS
 // ============================================================
+function startRound(session: PlanningSession, round: number): string  // Returns prompt
+function approveRound(session: PlanningSession, round: number): void
+function addFeedback(session: PlanningSession, round: number, feedback: string): void
 
 // ============================================================
-// SECTION 6: EVENT PROCESSING (70 lines)
+// EVENT HANDLING
 // ============================================================
+function handleEvent(event: OpenCodeEvent): Promise<void>
 
 // ============================================================
-// SECTION 7: PLUGIN EXPORT (20 lines)
+// PLUGIN EXPORT
 // ============================================================
+export const PlanningPlugin: Plugin = async () => { /* ... */ }
+export default PlanningPlugin
 ```
 
 ---
 
-## 8. OPEN QUESTIONS (Round 1)
+## 8. ROUND 2 SUMMARY
 
-1. **Session Scope**: Should planning sessions be per-feature or per-conversation?
-2. **Multi-Feature**: Can multiple features be planned in parallel?
-3. **AI Enforcement**: How does the plugin actually "block" implementation?
-4. **Event Source**: Does OpenCode emit events we can intercept, or do we need a different mechanism?
-5. **Template Customization**: Should users be able to define custom rounds?
-6. **Integration**: How does this integrate with the existing hypr-notifier?
+### What Changed From Round 1
+1. **Scope clarified**: Per-feature sessions
+2. **Prompts added**: Complete prompts for all 5 rounds
+3. **Complexity reduced**: No enforcement mechanism
+4. **Clarity improved**: Each round has clear purpose and output
 
----
+### What I Need From You
 
-## 9. RISKS IDENTIFIED
-
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| OpenCode may not support event interception | High | Research OpenCode event model |
-| Single-file constraint limits complexity | Medium | Careful code organization |
-| User fatigue from too many rounds | Medium | Make rounds efficient, allow fast-track |
-| State persistence across sessions | Medium | Robust file handling |
+1. Are the 5 round prompts clear and complete?
+2. Do the prompts ask the right questions for your workflow?
+3. Is any round missing critical content?
+4. Should any round be split or combined?
+5. Is the artifact output from each round what you need?
 
 ---
 
-## ROUND 1 STATUS: AWAITING FEEDBACK
-
-Please review this initial architecture and provide feedback:
-
-1. Does this vision align with what you want?
-2. Are the 5 rounds appropriately named/scoped?
-3. Is the notification integration approach correct?
-4. Any features you want added or removed?
-5. Concerns about the implementation approach?
-
-**To proceed**: Reply with your feedback or "approve round 1"
+**Review this design. Provide feedback or say "approve round 2" to continue to Round 3.**

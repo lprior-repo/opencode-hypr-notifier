@@ -1,581 +1,664 @@
 # Planning Plugin Design Document
 
-## Version: Round 2 - Full Prompts & Clarity Focus
+## Version: Round 3 - The Transcendent Loop
 
-**Changes from Round 1:**
-- Session scope: Per-feature (not per-conversation)
-- Removed enforcement complexity
-- Added complete prompts for all 5 rounds
-- Focused on clarity and usability
+**Previous rounds asked**: "How do we plan better?"
+**This round asks**: "What are humans actually for in this loop?"
 
 ---
 
-## 1. VISION
+## 1. THE REFRAME
 
-### What This Plugin Does
+### What We Got Wrong
 
-When an AI assistant receives a request for a significant feature, this plugin guides it through **5 structured rounds of planning** before any implementation begins. Each round has a specific purpose and produces concrete artifacts.
+Rounds 1-2 designed a **serial planning process**:
+```
+Human asks → AI produces 1 thing → Human reviews → Human asks for changes → repeat
+```
 
-### Why It Matters
+This is the same bottleneck we're trying to escape. We made planning "more thorough" but kept the human in every iteration.
 
-- Forces thorough thinking before coding
-- Catches design flaws early
-- Ensures user alignment at every step
-- Creates documentation as a byproduct
-- Reduces rework and wasted effort
+### What We Actually Need
 
----
+```
+Human intends → AI produces 100 attempts → Reality tests all 100 →
+Survivors surface → Human judges survivors only
 
-## 2. THE 5 ROUNDS
+Bottleneck: only compute and human intent clarity
+```
 
-| Round | Name | Purpose | Output |
-|-------|------|---------|--------|
-| 1 | **Discovery** | Understand what we're building and why | Requirements document |
-| 2 | **Architecture** | Design the high-level structure | Component diagram + decisions |
-| 3 | **Specification** | Define the details | API contracts, data models |
-| 4 | **Edge Cases** | Identify what could go wrong | Risk register + mitigations |
-| 5 | **Implementation Plan** | Create the execution roadmap | Ordered task list |
+The planning plugin should not guide humans through planning steps.
+It should **compile human intent into executable specifications**, then get out of the way.
 
 ---
 
-## 3. COMPLETE ROUND PROMPTS
+## 2. THE ARCHITECTURE
 
-### ROUND 1: DISCOVERY
-
-```markdown
-# ROUND 1: DISCOVERY
-
-I need to fully understand what we're building before designing a solution.
-
-## Questions I Need Answered
-
-### The Problem
-1. What specific problem are you trying to solve?
-2. What's happening today that's painful or missing?
-3. Who experiences this problem? (end users, developers, ops?)
-
-### The Solution Vision
-4. What does success look like when this is done?
-5. How will you know it's working correctly?
-6. What's the simplest version that would be valuable?
-
-### Constraints
-7. What technologies must we use? (language, framework, infra)
-8. What technologies must we avoid?
-9. Are there performance requirements? (latency, throughput, scale)
-10. Are there security or compliance requirements?
-
-### Context
-11. Is there existing code that relates to this feature?
-12. Are there patterns elsewhere in the codebase I should follow?
-13. What have you already tried or considered?
-
-## What I'll Produce
-
-Once you answer these questions, I'll create:
-
-- **Problem Statement**: A clear 2-3 sentence description of what we're solving
-- **Success Criteria**: Measurable outcomes that define "done"
-- **Constraints List**: Hard boundaries I must respect
-- **Scope Definition**: What's in and what's explicitly out
-
----
-
-**Please answer the questions above, then say "approve round 1" to continue.**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     INTENT TERMINAL                             │
+│                                                                 │
+│   Human provides:                                               │
+│   - What they want (natural language)                           │
+│   - Constraints (must/must-not)                                 │
+│   - Examples of "good" (if available)                           │
+│                                                                 │
+│   Human does NOT:                                               │
+│   - Iterate manually                                            │
+│   - Review intermediate work                                    │
+│   - Debug                                                       │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     INTENT COMPILER                             │
+│                                                                 │
+│   Inputs:                                                       │
+│   - Natural language intent                                     │
+│   - Codebase context                                            │
+│   - Constraints                                                 │
+│                                                                 │
+│   Outputs:                                                      │
+│   - Executable specification                                    │
+│   - Success criteria (testable assertions)                      │
+│   - Verification harness (how to check if it worked)            │
+│                                                                 │
+│   THIS IS THE HARD PART. THIS IS WHERE AI SHINES.               │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    GENERATION SWARM                             │
+│                                                                 │
+│   Inputs:                                                       │
+│   - Executable specification                                    │
+│   - N = number of parallel attempts                             │
+│                                                                 │
+│   Outputs:                                                      │
+│   - N different implementations                                 │
+│   - Variations: algorithms, structures, styles                  │
+│   - Mutations: random perturbations of good solutions           │
+│                                                                 │
+│   NO JUDGMENT. JUST VOLUME.                                     │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    REALITY HARNESS                              │
+│                                                                 │
+│   Executes EVERY attempt against:                               │
+│   - Type checker (does it compile?)                             │
+│   - Linter (does it follow rules?)                              │
+│   - Unit tests (does it pass spec?)                             │
+│   - Property tests (does it hold invariants?)                   │
+│   - Benchmarks (how fast? how small?)                           │
+│                                                                 │
+│   Returns: Pass/Fail + Evidence                                 │
+│   Does not care about intent or elegance.                       │
+│   Only answers: DOES THIS WORK OR NOT.                          │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    SURVIVOR POOL                                │
+│                                                                 │
+│   Inputs: All attempts + All results                            │
+│                                                                 │
+│   Filters: Only those that passed verification                  │
+│                                                                 │
+│   Ranks by secondary criteria:                                  │
+│   - Simplicity (fewer lines, fewer dependencies)                │
+│   - Speed (benchmark results)                                   │
+│   - Readability (AI-assessed or heuristic)                      │
+│                                                                 │
+│   Outputs: Top K candidates for human judgment                  │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    HUMAN JUDGMENT                               │
+│                                                                 │
+│   Sees: K survivors (already verified working)                  │
+│                                                                 │
+│   Chooses:                                                      │
+│   - "This one" → SHIP                                           │
+│   - "None of these, try X angle" → Redirect intent              │
+│   - "Closer but needs Y" → Refine specification                 │
+│                                                                 │
+│   Minimal effort. Maximum leverage.                             │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-### ROUND 2: ARCHITECTURE
+## 3. THE FIVE COMPONENTS
 
-```markdown
-# ROUND 2: ARCHITECTURE
+### 3.1 Intent Terminal
 
-Based on your requirements from Round 1, I'll now design the high-level structure.
+**What it is**: The human interface. Minimal, focused on capturing intent.
 
-## My Proposed Architecture
+**What human provides**:
+```yaml
+intent: "Add user authentication to the app"
 
-### Components
-I'll define each major component:
+constraints:
+  must:
+    - "Use existing User model in src/models/user.ts"
+    - "Session-based, not JWT"
+    - "Password hashing with bcrypt"
+  must_not:
+    - "No OAuth for now"
+    - "No changes to database schema"
 
-| Component | Responsibility | Inputs | Outputs |
-|-----------|---------------|--------|---------|
-| [Name] | [What it does] | [What it receives] | [What it produces] |
+examples:
+  good: "The login flow in acme-corp/webapp"
+  bad: "The over-engineered auth in that enterprise project"
 
-### Component Relationships
+done_when:
+  - "User can register with email/password"
+  - "User can log in and get a session"
+  - "Protected routes reject unauthenticated requests"
 ```
-[Diagram showing how components connect]
-```
 
-### Key Architectural Decisions
-
-For each significant decision, I'll explain:
-
-| Decision | Options Considered | Choice | Rationale |
-|----------|-------------------|--------|-----------|
-| [What needed deciding] | [Option A, B, C] | [Selected] | [Why this one] |
-
-### Data Flow
-
-1. [Entry point] receives [input]
-2. [Component A] processes it by [action]
-3. [Component B] transforms it to [output]
-4. [Exit point] returns [result]
-
-### Technology Choices
-
-| Need | Technology | Why |
-|------|------------|-----|
-| [Requirement] | [Tool/Library] | [Justification] |
-
-## What I Need From You
-
-1. Does this structure make sense for your codebase?
-2. Are the component boundaries appropriate?
-3. Do the technology choices align with your preferences?
-4. Is there existing code I should integrate with rather than build new?
+**What human does NOT provide**:
+- Implementation details
+- Step-by-step instructions
+- Architecture decisions
+- Code reviews
 
 ---
 
-**Review the architecture above. Provide feedback or say "approve round 2" to continue.**
-```
+### 3.2 Intent Compiler
 
----
+**What it is**: AI system that transforms intent into executable specification.
 
-### ROUND 3: SPECIFICATION
+**Input**: Intent (natural language + constraints + examples)
 
-```markdown
-# ROUND 3: SPECIFICATION
+**Output**: Specification object
 
-Now I'll define the precise details of each component.
-
-## Data Models
-
-### [Model Name]
 ```typescript
-type ModelName = {
-  id: string                    // Unique identifier
-  field1: Type                  // Description of field1
-  field2: Type                  // Description of field2
-  createdAt: Date               // When created
-  updatedAt: Date               // When last modified
+type Specification = {
+  // What success looks like (testable)
+  assertions: Assertion[]
+
+  // Generated test file that verifies the implementation
+  verificationTests: string
+
+  // Type signature that must be satisfied
+  typeContract: string
+
+  // Files that can be created/modified
+  allowedFiles: string[]
+
+  // Files that must not be touched
+  forbiddenFiles: string[]
+
+  // Patterns to follow (extracted from codebase)
+  patterns: Pattern[]
+
+  // The human's original intent (for reference)
+  originalIntent: string
+}
+
+type Assertion = {
+  description: string           // "User can register with email/password"
+  testCode: string              // Actual test that verifies this
+  weight: number                // How important (1-10)
 }
 ```
 
-[Repeat for each data model]
+**The compiler's job**:
+1. Parse the codebase to understand existing patterns
+2. Identify relevant files and their interfaces
+3. Generate test assertions from "done_when" criteria
+4. Create a verification harness that can check any implementation
+5. Define boundaries (what can/cannot change)
 
-## API Contracts
+**This is the hardest part**. Getting intent→spec right determines everything downstream.
 
-### [Function/Endpoint Name]
+---
 
-**Purpose**: [What this does]
+### 3.3 Generation Swarm
 
-**Signature**:
+**What it is**: Parallel AI generation of N implementations.
+
+**Input**: Specification
+
+**Output**: N implementation attempts
+
 ```typescript
-function name(param1: Type, param2: Type): ReturnType
-```
+type Attempt = {
+  id: string
+  files: FileChange[]           // The actual code changes
+  approach: string              // Brief description of strategy
+  confidence: number            // AI's self-assessed confidence
+}
 
-**Parameters**:
-| Name | Type | Required | Description |
-|------|------|----------|-------------|
-| param1 | Type | Yes | What this parameter controls |
-| param2 | Type | No | Optional behavior modifier |
-
-**Returns**:
-| Condition | Return Value |
-|-----------|--------------|
-| Success | { result: Data } |
-| Not Found | { error: "NOT_FOUND" } |
-| Invalid Input | { error: "INVALID_INPUT", details: string } |
-
-**Example**:
-```typescript
-// Input
-name("value1", { option: true })
-
-// Output
-{ result: { id: "123", status: "complete" } }
-```
-
-[Repeat for each function/endpoint]
-
-## State Management
-
-### State Shape
-```typescript
-type State = {
-  [key]: Type    // Description
+type FileChange = {
+  path: string
+  action: "create" | "modify" | "delete"
+  content: string
 }
 ```
 
-### State Transitions
-| Current State | Event | New State | Side Effects |
-|---------------|-------|-----------|--------------|
-| idle | START | running | Initialize resources |
-| running | COMPLETE | done | Cleanup, notify |
-| running | ERROR | failed | Log, cleanup |
+**Generation strategies** (run in parallel):
 
-## File Structure
+| Strategy | Description | Count |
+|----------|-------------|-------|
+| Vanilla | Straightforward implementation | 20 |
+| Minimal | Fewest lines possible | 15 |
+| Defensive | Maximum error handling | 15 |
+| Patterns | Copy patterns from codebase | 20 |
+| Mutations | Variations of promising attempts | 20 |
+| Adversarial | Try to break the spec | 10 |
 
-```
-src/
-├── [feature]/
-│   ├── types.ts        # Type definitions
-│   ├── [component].ts  # Main implementation
-│   ├── utils.ts        # Helper functions
-│   └── index.ts        # Public exports
-└── __tests__/
-    └── [feature].test.ts
-```
-
-## What I Need From You
-
-1. Do these data models capture everything needed?
-2. Are the API contracts clear and complete?
-3. Does the file structure fit your project conventions?
-4. Any fields, parameters, or behaviors missing?
+**Key principle**: No judgment during generation. Generate volume. Let reality filter.
 
 ---
 
-**Review the specifications above. Provide feedback or say "approve round 3" to continue.**
+### 3.4 Reality Harness
+
+**What it is**: Parallel execution of all attempts against verification.
+
+**Verification pipeline** (for each attempt):
+
+```
+Attempt
+   │
+   ├─→ Apply changes to temp workspace
+   │
+   ├─→ Type check (tsc --noEmit)
+   │      └─→ Pass/Fail + errors
+   │
+   ├─→ Lint (eslint/biome)
+   │      └─→ Pass/Fail + warnings
+   │
+   ├─→ Unit tests (bun test)
+   │      └─→ Pass/Fail + coverage
+   │
+   ├─→ Specification tests (from compiler)
+   │      └─→ Pass/Fail + which assertions
+   │
+   ├─→ Property tests (if applicable)
+   │      └─→ Pass/Fail + counterexamples
+   │
+   └─→ Benchmarks (if applicable)
+          └─→ Metrics: time, memory, size
 ```
 
----
-
-### ROUND 4: EDGE CASES
-
-```markdown
-# ROUND 4: EDGE CASES
-
-Before implementation, I need to identify what could go wrong and how to handle it.
-
-## Error Scenarios
-
-### Input Errors
-| Scenario | How It Happens | Detection | Response |
-|----------|---------------|-----------|----------|
-| Invalid input format | User provides malformed data | Validation at entry | Return 400 with details |
-| Missing required field | Required param not provided | Schema validation | List missing fields |
-| Out of range value | Number exceeds limits | Bounds check | Return allowed range |
-
-### System Errors
-| Scenario | How It Happens | Detection | Response |
-|----------|---------------|-----------|----------|
-| Dependency unavailable | External service down | Timeout/connection error | Retry with backoff, then fail gracefully |
-| Resource exhausted | Memory/disk full | Resource monitoring | Reject new requests, alert |
-| Concurrent modification | Race condition | Version check | Retry or conflict error |
-
-### Business Logic Errors
-| Scenario | How It Happens | Detection | Response |
-|----------|---------------|-----------|----------|
-| [Specific to feature] | [Cause] | [Detection method] | [Handling] |
-
-## Security Considerations
-
-| Threat | Risk Level | Mitigation |
-|--------|------------|------------|
-| Injection attacks | High | Input sanitization, parameterized queries |
-| Authentication bypass | High | Validate tokens on every request |
-| Data exposure | Medium | Principle of least privilege |
-| [Feature-specific] | [Level] | [Mitigation] |
-
-## Performance Concerns
-
-| Scenario | Threshold | Detection | Mitigation |
-|----------|-----------|-----------|------------|
-| High load | >100 req/s | Metrics monitoring | Rate limiting, caching |
-| Large payload | >10MB | Size check at entry | Streaming, chunking |
-| Slow dependency | >5s response | Timeout | Circuit breaker |
-
-## Recovery Procedures
-
-### If [Component] Fails
-1. [Immediate action]
-2. [Fallback behavior]
-3. [Recovery steps]
-4. [Verification]
-
-### Data Consistency
-- How do we ensure data stays consistent if a process fails mid-operation?
-- What's the rollback strategy?
-- How do we detect and fix inconsistencies?
-
-## What I Need From You
-
-1. Are there domain-specific edge cases I'm missing?
-2. What error scenarios have you seen in similar features?
-3. Are the security mitigations appropriate for your risk tolerance?
-4. What's your preference for error message verbosity?
-
----
-
-**Review the edge cases above. Provide feedback or say "approve round 4" to continue.**
-```
-
----
-
-### ROUND 5: IMPLEMENTATION PLAN
-
-```markdown
-# ROUND 5: IMPLEMENTATION PLAN
-
-All designs are approved. Here's the execution roadmap.
-
-## Implementation Order
-
-I'll implement in this sequence, where each step builds on the previous:
-
-### Phase 1: Foundation
-| Step | Task | Dependencies | Output |
-|------|------|--------------|--------|
-| 1.1 | Create type definitions | None | types.ts |
-| 1.2 | Set up file structure | None | Directory scaffold |
-| 1.3 | Write test fixtures | Types | test-fixtures.ts |
-
-### Phase 2: Core Logic
-| Step | Task | Dependencies | Output |
-|------|------|--------------|--------|
-| 2.1 | Implement [core component] | Types | [file].ts |
-| 2.2 | Write unit tests for core | Core component | [file].test.ts |
-| 2.3 | Implement [next component] | Core component | [file].ts |
-
-### Phase 3: Integration
-| Step | Task | Dependencies | Output |
-|------|------|--------------|--------|
-| 3.1 | Connect components | All components | Integration code |
-| 3.2 | Integration tests | Connected system | integration.test.ts |
-| 3.3 | Error handling | Integration | Error paths tested |
-
-### Phase 4: Polish
-| Step | Task | Dependencies | Output |
-|------|------|--------------|--------|
-| 4.1 | Edge case handling | Core complete | Robust error handling |
-| 4.2 | Performance verification | Integration complete | Benchmarks passing |
-| 4.3 | Documentation | All code complete | README updates |
-
-## Test Strategy
-
-### Unit Tests
-- Each function tested in isolation
-- Mock external dependencies
-- Cover happy path + error cases
-- Target: [X]% code coverage
-
-### Integration Tests
-- Test component interactions
-- Use real dependencies where possible
-- Cover main user flows
-
-### Test Commands
-```bash
-bun test                    # Run all tests
-bun test --watch            # Watch mode
-bun test [file]             # Single file
-```
-
-## Verification Checklist
-
-Before marking complete:
-- [ ] All tests pass
-- [ ] No TypeScript errors
-- [ ] Lint passes
-- [ ] Manual testing of main flow
-- [ ] Edge cases handled
-- [ ] Error messages are clear
-- [ ] Code is readable
-
-## Rollback Plan
-
-If issues are discovered after implementation:
-1. [How to detect problems]
-2. [How to disable/rollback]
-3. [How to fix forward]
-
----
-
-## PLANNING COMPLETE
-
-All 5 rounds are approved. I have:
-
-1. **Discovery**: Clear requirements and constraints
-2. **Architecture**: Approved component design
-3. **Specification**: Detailed contracts and models
-4. **Edge Cases**: Identified risks and mitigations
-5. **Implementation Plan**: Ordered execution roadmap
-
-**Ready to begin implementation. Say "start implementation" to proceed.**
-```
-
----
-
-## 4. STATE MANAGEMENT
-
-### Per-Feature Session
-
-Each feature being planned gets its own session:
+**Output per attempt**:
 
 ```typescript
-type PlanningSession = Readonly<{
-  featureId: string           // Unique ID for this feature
-  featureName: string         // Human-readable name
-  currentRound: 1 | 2 | 3 | 4 | 5
-  rounds: {
-    discovery: RoundState
-    architecture: RoundState
-    specification: RoundState
-    edgeCases: RoundState
-    implementationPlan: RoundState
-  }
-  artifacts: {
-    requirements: string      // From Round 1
-    architecture: string      // From Round 2
-    specification: string     // From Round 3
-    edgeCases: string         // From Round 4
-    implementationPlan: string // From Round 5
-  }
-  createdAt: number
-  updatedAt: number
-}>
+type VerificationResult = {
+  attemptId: string
+  passed: boolean
 
-type RoundState = Readonly<{
-  status: "pending" | "in_progress" | "approved"
-  feedback: string[]          // User feedback incorporated
-  approvedAt: number | null
-}>
+  checks: {
+    typecheck: CheckResult
+    lint: CheckResult
+    unitTests: CheckResult
+    specTests: CheckResult
+    propertyTests: CheckResult | null
+    benchmarks: BenchmarkResult | null
+  }
+
+  // How many of the original "done_when" criteria passed
+  assertionsPassed: number
+  assertionsTotal: number
+
+  // Failure details if not passed
+  failureReason: string | null
+}
 ```
 
-### Storage Location
+**Key principle**: Reality is the only judge. Not the AI, not the human, not "best practices."
 
-```
-~/.config/opencode/planning/
-├── sessions/
-│   └── {featureId}.json      # Session state
-└── config.json               # Plugin settings
+---
+
+### 3.5 Survivor Pool
+
+**What it is**: Filters and ranks passing attempts.
+
+**Filtering**: Only attempts where `passed === true`
+
+**Ranking criteria**:
+
+| Criterion | Weight | Measurement |
+|-----------|--------|-------------|
+| Assertions passed | 40% | Count of passing spec assertions |
+| Simplicity | 25% | Lines of code, cyclomatic complexity |
+| Performance | 15% | Benchmark results (if available) |
+| Readability | 10% | Heuristics or AI assessment |
+| Test coverage | 10% | Coverage of new code |
+
+**Output**: Top K attempts (default K=5)
+
+```typescript
+type Survivor = {
+  attempt: Attempt
+  result: VerificationResult
+  rank: number
+  scores: {
+    assertions: number
+    simplicity: number
+    performance: number
+    readability: number
+    coverage: number
+    overall: number
+  }
+}
 ```
 
 ---
 
-## 5. PLUGIN EVENTS
+## 4. THE LOOP
+
+```typescript
+async function manifest(intent: Intent): Promise<Artifact> {
+  // Step 1: Compile intent to specification
+  const spec = await compileIntentToSpec(intent);
+
+  // Present spec to human for validation
+  const specApproved = await humanValidateSpec(spec);
+  if (!specApproved.approved) {
+    // Human refines intent, try again
+    return manifest(specApproved.refinedIntent);
+  }
+
+  // Step 2: Main generation loop
+  while (true) {
+    // Generate many attempts in parallel
+    const attempts = await generateMany(spec, { n: 100 });
+
+    // Verify all attempts against reality
+    const results = await verifyAll(attempts, spec);
+
+    // Filter to survivors
+    const survivors = results.filter(r => r.passed);
+
+    // Rank and take top K
+    const topK = rankSurvivors(survivors).slice(0, 5);
+
+    if (topK.length === 0) {
+      // Nothing passed. Show failures to human for redirect.
+      const redirect = await humanHandleNoSurvivors(results);
+      if (redirect.action === "refine_spec") {
+        spec = await compileIntentToSpec(redirect.newIntent);
+        continue;
+      } else if (redirect.action === "abort") {
+        throw new Error("Human aborted: no viable solutions");
+      }
+    }
+
+    // Present survivors to human
+    const judgment = await humanJudge(topK);
+
+    switch (judgment.decision) {
+      case "accept":
+        // Human picked a winner
+        return applyAttempt(judgment.selected);
+
+      case "refine":
+        // Human wants variations on a theme
+        spec = refineSpec(spec, judgment.refinement);
+        continue;
+
+      case "redirect":
+        // Human wants a completely different angle
+        spec = await compileIntentToSpec(judgment.newIntent);
+        continue;
+    }
+  }
+}
+```
+
+---
+
+## 5. WHAT THE PLUGIN ACTUALLY DOES
+
+Given this architecture, the **Planning Plugin** is specifically the **Intent Compiler** component.
+
+### Plugin Interface
+
+```typescript
+import type { Plugin } from "@opencode-ai/plugin"
+
+export const PlanningPlugin: Plugin = async () => {
+  return {
+    // Hook into user messages to detect intent
+    message: async ({ message, context }) => {
+      const intent = parseIntent(message);
+
+      if (intent.isSignificantFeature) {
+        // Compile to specification
+        const spec = await compileIntentToSpec(intent, context);
+
+        // Return the specification for the generation swarm
+        return {
+          type: "planning.spec.ready",
+          properties: { spec }
+        };
+      }
+    },
+
+    // Hook into events from other components
+    event: async ({ event }) => {
+      switch (event.type) {
+        case "generation.complete":
+          // Swarm finished generating attempts
+          break;
+        case "verification.complete":
+          // Reality harness finished
+          break;
+        case "human.judgment":
+          // Human made a decision
+          break;
+      }
+    }
+  };
+};
+```
+
+### The Compiler's Prompts
+
+Instead of prompts for "rounds of planning," we need prompts for **compiling intent to specification**.
+
+#### Prompt 1: Parse Intent
+
+```markdown
+# PARSE INTENT
+
+You are parsing a human's intent into structured form.
+
+## Input
+The human said: "{message}"
+
+## Output
+
+Extract:
+
+1. **Core Intent**: What do they fundamentally want? (1 sentence)
+
+2. **Constraints**:
+   - must: Things that must be true
+   - must_not: Things that must not happen
+
+3. **Success Criteria**: How will we know it's done?
+   - List specific, testable conditions
+
+4. **Ambiguities**: What's unclear that needs clarification?
+
+5. **Scope**: What's explicitly in/out?
+
+Return as structured YAML.
+```
+
+#### Prompt 2: Analyze Codebase
+
+```markdown
+# ANALYZE CODEBASE FOR INTENT
+
+Given:
+- Intent: {intent}
+- Codebase files: {file_list}
+
+Determine:
+
+1. **Relevant Files**: Which files relate to this intent?
+   - List paths and why they're relevant
+
+2. **Patterns**: What patterns exist that should be followed?
+   - Code style, architecture, naming conventions
+
+3. **Interfaces**: What existing interfaces must be satisfied?
+   - Types, APIs, contracts
+
+4. **Forbidden Zones**: What must NOT be changed?
+   - Critical files, stable APIs
+
+5. **Integration Points**: Where does new code connect to existing?
+```
+
+#### Prompt 3: Generate Specification
+
+```markdown
+# GENERATE EXECUTABLE SPECIFICATION
+
+Given:
+- Intent: {intent}
+- Codebase analysis: {analysis}
+
+Create a specification that a generation swarm can implement against.
+
+## Assertions
+
+For each success criterion, write a test:
+
+```typescript
+// Assertion: "User can register with email/password"
+test("user registration", async () => {
+  const result = await register("test@example.com", "password123");
+  expect(result.success).toBe(true);
+  expect(result.user.email).toBe("test@example.com");
+});
+```
+
+## Type Contract
+
+Define the types that must exist:
+
+```typescript
+type RegisterResult = {
+  success: boolean;
+  user?: User;
+  error?: string;
+};
+
+function register(email: string, password: string): Promise<RegisterResult>;
+```
+
+## Allowed Files
+
+List files that can be created or modified:
+- src/auth/register.ts (create)
+- src/routes/auth.ts (modify)
+
+## Forbidden Files
+
+List files that must not be touched:
+- src/models/user.ts (stable schema)
+- src/db/migrations/* (no schema changes)
+```
+
+#### Prompt 4: Validate Specification
+
+```markdown
+# VALIDATE SPECIFICATION
+
+Before sending to generation swarm, verify:
+
+1. **Testable**: Every assertion has executable test code?
+2. **Bounded**: Allowed/forbidden files clearly defined?
+3. **Consistent**: No contradictions in constraints?
+4. **Sufficient**: Passing all assertions = actually done?
+5. **Minimal**: No unnecessary complexity in spec?
+
+If issues found, fix them. If clarification needed from human, list questions.
+```
+
+---
+
+## 6. INTEGRATION WITH ECOSYSTEM
 
 ### Events Emitted
 
-| Event | When | Properties |
-|-------|------|------------|
-| `planning.started` | New planning session begins | `{ featureId, featureName }` |
-| `planning.round.started` | Round begins | `{ featureId, round, roundName }` |
-| `planning.round.approved` | User approves round | `{ featureId, round }` |
-| `planning.complete` | All 5 rounds approved | `{ featureId, featureName }` |
-| `planning.feedback` | User provides feedback | `{ featureId, round, feedback }` |
+| Event | When | Consumed By |
+|-------|------|-------------|
+| `planning.intent.parsed` | Intent extracted from message | UI |
+| `planning.spec.ready` | Specification compiled | Generation Swarm |
+| `planning.clarification.needed` | Ambiguity found | Human Terminal |
+| `planning.spec.validated` | Spec ready for generation | Orchestrator |
 
-### Notification Integration
+### Events Consumed
 
-The hypr-notifier can listen for these events:
-
-| Event | Notification |
-|-------|--------------|
-| `planning.round.started` | "Planning Round {n}: {name}" |
-| `planning.round.approved` | "Round {n} approved" |
-| `planning.complete` | "Planning complete - Ready to implement" |
-
----
-
-## 6. CONFIGURATION
-
-### Config File
-
-`~/.config/opencode/planning/config.json`
-
-```json
-{
-  "notifications": true,
-  "persistSessions": true,
-  "defaultRounds": ["discovery", "architecture", "specification", "edgeCases", "implementationPlan"]
-}
-```
-
-### Sensible Defaults
-
-All settings have reasonable defaults. The plugin works without any configuration.
+| Event | From | Action |
+|-------|------|--------|
+| `human.intent` | Human Terminal | Start compilation |
+| `human.clarification` | Human Terminal | Incorporate and continue |
+| `human.refine` | Judgment | Update spec |
+| `generation.complete` | Swarm | Trigger verification |
+| `verification.complete` | Harness | Trigger ranking |
 
 ---
 
-## 7. IMPLEMENTATION STRUCTURE
+## 7. WHAT STILL NEEDS DESIGN
 
-```typescript
-// src/planning-plugin.ts
+This plugin is ONE component. The full system needs:
 
-// ============================================================
-// TYPES
-// ============================================================
-type PlanningSession = { /* ... */ }
-type RoundState = { /* ... */ }
-type PlanningEvent = { /* ... */ }
+| Component | Status | Notes |
+|-----------|--------|-------|
+| Intent Terminal | Not designed | Human input interface |
+| Intent Compiler | This plugin | Designed here |
+| Generation Swarm | Not designed | Parallel AI generation |
+| Reality Harness | Not designed | Parallel verification |
+| Survivor Pool | Not designed | Ranking and filtering |
+| Orchestrator | Not designed | Coordinates all components |
 
-// ============================================================
-// CONSTANTS
-// ============================================================
-const ROUND_PROMPTS = {
-  discovery: `...`,
-  architecture: `...`,
-  specification: `...`,
-  edgeCases: `...`,
-  implementationPlan: `...`
-}
+### Questions for Human
 
-const DEFAULT_CONFIG = Object.freeze({ /* ... */ })
-
-// ============================================================
-// STATE
-// ============================================================
-let sessions: Map<string, PlanningSession> = new Map()
-let config: PlanningConfig | null = null
-
-// ============================================================
-// SESSION MANAGEMENT
-// ============================================================
-function createSession(featureId: string, featureName: string): PlanningSession
-function getSession(featureId: string): PlanningSession | null
-function updateSession(featureId: string, updates: Partial<PlanningSession>): void
-function saveSession(session: PlanningSession): Promise<void>
-function loadSession(featureId: string): Promise<PlanningSession | null>
-
-// ============================================================
-// ROUND HANDLERS
-// ============================================================
-function startRound(session: PlanningSession, round: number): string  // Returns prompt
-function approveRound(session: PlanningSession, round: number): void
-function addFeedback(session: PlanningSession, round: number, feedback: string): void
-
-// ============================================================
-// EVENT HANDLING
-// ============================================================
-function handleEvent(event: OpenCodeEvent): Promise<void>
-
-// ============================================================
-// PLUGIN EXPORT
-// ============================================================
-export const PlanningPlugin: Plugin = async () => { /* ... */ }
-export default PlanningPlugin
-```
+1. Are we building the full system or just the Intent Compiler plugin?
+2. How does generation swarm actually spawn parallel AI calls?
+3. What's the interface between components? (Events? Direct calls? Files?)
+4. Where does state live? (Memory? Disk? Database?)
+5. Is this an OpenCode plugin or a standalone system?
 
 ---
 
-## 8. ROUND 2 SUMMARY
+## 8. ROUND 3 SUMMARY
 
-### What Changed From Round 1
-1. **Scope clarified**: Per-feature sessions
-2. **Prompts added**: Complete prompts for all 5 rounds
-3. **Complexity reduced**: No enforcement mechanism
-4. **Clarity improved**: Each round has clear purpose and output
+### What Changed
 
-### What I Need From You
+| Before | After |
+|--------|-------|
+| 5 serial rounds of planning | Intent → Spec compilation |
+| Human reviews every iteration | Human judges only survivors |
+| AI produces 1 thing at a time | AI produces N things in parallel |
+| Planning is the goal | Specification is the goal |
+| Human iterates | Reality iterates |
 
-1. Are the 5 round prompts clear and complete?
-2. Do the prompts ask the right questions for your workflow?
-3. Is any round missing critical content?
-4. Should any round be split or combined?
-5. Is the artifact output from each round what you need?
+### The Core Insight
+
+> You don't iterate. Reality iterates.
+> You don't generate. AI generates.
+> You don't verify. Tests verify.
+>
+> You ONLY do what only you can do:
+> - Know what you want
+> - Recognize when you have it
+> - Redirect when the whole approach is wrong
 
 ---
 
-**Review this design. Provide feedback or say "approve round 2" to continue to Round 3.**
+**This is Round 3. Review and provide feedback.**
+
+**To proceed**: Say "approve round 3" or redirect the design.
